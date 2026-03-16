@@ -25,6 +25,7 @@ import { createToolCallModel } from './toolCall';
 import { createMemoryModel } from './memory';
 import { createAccessRoleModel } from './accessRole';
 import { createAclEntryModel } from './aclEntry';
+import { createSubscriptionModel } from './subscription';
 import { createGroupModel } from './group';
 
 /**
@@ -60,5 +61,6 @@ export function createModels(mongoose: typeof import('mongoose')) {
     AccessRole: createAccessRoleModel(mongoose),
     AclEntry: createAclEntryModel(mongoose),
     Group: createGroupModel(mongoose),
+    Subscription: createSubscriptionModel(mongoose),
   };
 }

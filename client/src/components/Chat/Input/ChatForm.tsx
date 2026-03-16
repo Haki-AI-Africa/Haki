@@ -19,6 +19,8 @@ import {
   useSubmitMessage,
   useFocusChatEffect,
 } from '~/hooks';
+import { useAuthContext } from '~/hooks/AuthContext';
+import { useGetSubscription } from '~/data-provider';
 import { mainTextareaId, BadgeItem } from '~/common';
 import AttachFileChat from './Files/AttachFileChat';
 import FileFormChat from './Files/FileFormChat';
@@ -40,6 +42,7 @@ const ChatForm = memo(({ index = 0 }: { index?: number }) => {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   useFocusChatEffect(textAreaRef);
   const localize = useLocalize();
+  const { isAuthenticated } = useAuthContext();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [, setIsScrollable] = useState(false);
@@ -62,6 +65,9 @@ const ChatForm = memo(({ index = 0 }: { index?: number }) => {
   const [showMentionPopover, setShowMentionPopover] = useRecoilState(
     store.showMentionPopoverFamily(index),
   );
+  const { data: subscription } = useGetSubscription({
+    enabled: isAuthenticated,
+  });
 
   const { requiresKey } = useRequiresKey();
   const methods = useChatFormContext();
@@ -104,6 +110,14 @@ const ChatForm = memo(({ index = 0 }: { index?: number }) => {
   const disableInputs = useMemo(
     () => requiresKey || invalidAssistant,
     [requiresKey, invalidAssistant],
+  );
+  const isMessageLimitReached = useMemo(
+    () =>
+      isAuthenticated === true &&
+      subscription != null &&
+      subscription.messagesRemaining !== -1 &&
+      subscription.messagesRemaining <= 0,
+    [isAuthenticated, subscription],
   );
 
   const handleContainerClick = useCallback(() => {
@@ -276,7 +290,7 @@ const ChatForm = memo(({ index = 0 }: { index?: number }) => {
                       (textAreaRef as React.MutableRefObject<HTMLTextAreaElement | null>).current =
                         e;
                     }}
-                    disabled={disableInputs || isNotAppendable}
+                    disabled={disableInputs || isNotAppendable || isMessageLimitReached}
                     onPaste={handlePaste}
                     onKeyDown={handleKeyDown}
                     onKeyUp={handleKeyUp}
@@ -317,7 +331,10 @@ const ChatForm = memo(({ index = 0 }: { index?: number }) => {
               )}
             >
               <div className={`${isRTL ? 'mr-2' : 'ml-2'}`}>
-                <AttachFileChat conversation={conversation} disableInputs={disableInputs} />
+                <AttachFileChat
+                  conversation={conversation}
+                  disableInputs={disableInputs || isMessageLimitReached}
+                />
               </div>
               <BadgeRow
                 showEphemeralBadges={
@@ -336,7 +353,7 @@ const ChatForm = memo(({ index = 0 }: { index?: number }) => {
                   methods={methods}
                   ask={submitMessage}
                   textAreaRef={textAreaRef}
-                  disabled={disableInputs || isNotAppendable}
+                  disabled={disableInputs || isNotAppendable || isMessageLimitReached}
                   isSubmitting={isSubmitting}
                 />
               )}
@@ -348,12 +365,27 @@ const ChatForm = memo(({ index = 0 }: { index?: number }) => {
                     <SendButton
                       ref={submitButtonRef}
                       control={methods.control}
-                      disabled={filesLoading || isSubmitting || disableInputs || isNotAppendable}
+                      disabled={
+                        filesLoading ||
+                        isSubmitting ||
+                        disableInputs ||
+                        isNotAppendable ||
+                        isMessageLimitReached
+                      }
                     />
                   )
                 )}
               </div>
             </div>
+            {isMessageLimitReached && (
+              <div className="px-4 pb-4 text-sm text-text-secondary">
+                You've reached your monthly message limit.{' '}
+                <a href="/pricing" className="underline">
+                  Upgrade your plan or purchase more messages
+                </a>
+                .
+              </div>
+            )}
             {TextToSpeech && automaticPlayback && <StreamAudio index={index} />}
           </div>
         </div>

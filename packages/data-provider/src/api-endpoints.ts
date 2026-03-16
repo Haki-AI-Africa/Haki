@@ -44,6 +44,12 @@ export const user = () => `${BASE_URL}/api/user`;
 
 export const balance = () => `${BASE_URL}/api/balance`;
 
+export const subscription = () => `${BASE_URL}/api/subscription`;
+export const subscriptionInitialize = () => `${BASE_URL}/api/subscription/initialize`;
+export const subscriptionVerify = (ref: string) =>
+  `${BASE_URL}/api/subscription/verify?reference=${encodeURIComponent(ref)}`;
+export const subscriptionPlans = () => `${BASE_URL}/api/subscription/plans`;
+
 export const userPlugins = () => `${BASE_URL}/api/user/plugins`;
 
 export const deleteUser = () => `${BASE_URL}/api/user/delete`;

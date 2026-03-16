@@ -31,6 +31,7 @@ const {
 } = require('~/models');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
 const { checkBalance } = require('~/models/balanceMethods');
+const { checkMessageLimit } = require('~/models/messageLimitMethods');
 const { truncateToolCallOutputs } = require('./prompts');
 const TextStream = require('./TextStream');
 
@@ -677,6 +678,8 @@ class BaseClient {
         });
       }
     }
+
+    await checkMessageLimit({ req: this.options.req, res: this.options.res });
 
     const balanceConfig = getBalanceConfig(appConfig);
     if (

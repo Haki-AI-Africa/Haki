@@ -109,6 +109,24 @@ export function getUserBalance(): Promise<t.TBalanceResponse> {
   return request.get(endpoints.balance());
 }
 
+export function getSubscription(): Promise<t.TSubscriptionResponse> {
+  return request.get(endpoints.subscription());
+}
+
+export function initializePayment(data: {
+  plan: 'starter' | 'standard';
+}): Promise<t.TPaymentInitResponse> {
+  return request.post(endpoints.subscriptionInitialize(), data);
+}
+
+export function verifyPayment(reference: string): Promise<t.TPaymentVerifyResponse> {
+  return request.get(endpoints.subscriptionVerify(reference));
+}
+
+export function getPlans(): Promise<t.TSubscriptionPlan[]> {
+  return request.get(endpoints.subscriptionPlans());
+}
+
 export const updateTokenCount = (text: string) => {
   return request.post(endpoints.tokenizer(), { arg: text });
 };

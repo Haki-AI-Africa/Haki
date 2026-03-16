@@ -1,15 +1,21 @@
 import { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useRecoilValue, useSetRecoilState } from 'recoil';
 import { replaceSpecialVars } from 'librechat-data-provider';
 import { useChatContext, useChatFormContext, useAddedChatContext } from '~/Providers';
 import { useAuthContext } from '~/hooks/AuthContext';
+import { useGetSubscription } from '~/data-provider';
 import store from '~/store';
 
 export default function useSubmitMessage() {
-  const { user } = useAuthContext();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuthContext();
   const methods = useChatFormContext();
   const { conversation: addedConvo } = useAddedChatContext();
   const { ask, index, getMessages, setMessages, latestMessage } = useChatContext();
+  const { data: subscription } = useGetSubscription({
+    enabled: isAuthenticated,
+  });
 
   const autoSendPrompts = useRecoilValue(store.autoSendPrompts);
   const setActivePrompt = useSetRecoilState(store.activePromptByIndex(index));
@@ -18,6 +24,15 @@ export default function useSubmitMessage() {
     (data?: { text: string }) => {
       if (!data) {
         return console.warn('No data provided to submitMessage');
+      }
+      if (
+        isAuthenticated === true &&
+        subscription != null &&
+        subscription.messagesRemaining !== -1 &&
+        subscription.messagesRemaining <= 0
+      ) {
+        navigate('/pricing');
+        return;
       }
       const rootMessages = getMessages();
       const isLatestInRootMessages = rootMessages?.some(
@@ -37,7 +52,7 @@ export default function useSubmitMessage() {
       );
       methods.reset();
     },
-    [ask, methods, addedConvo, setMessages, getMessages, latestMessage],
+    [ask, methods, addedConvo, setMessages, getMessages, latestMessage, isAuthenticated, subscription, navigate],
   );
 
   const submitPrompt = useCallback(

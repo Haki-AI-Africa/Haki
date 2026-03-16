@@ -654,3 +654,35 @@ export type TBalanceResponse = {
   lastRefill?: Date;
   refillAmount?: number;
 };
+
+export type TSubscriptionResponse = {
+  plan: 'free' | 'starter' | 'standard';
+  status: 'active' | 'cancelled' | 'expired' | 'past_due';
+  messageCredits: number;
+  messagesUsed: number;
+  messagesRemaining: number;
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+};
+
+export type TPaymentInitResponse = {
+  authorizationUrl: string;
+  reference: string;
+  accessCode: string;
+};
+
+export type TPaymentVerifyResponse = {
+  success: boolean;
+  plan: string;
+};
+
+export type TSubscriptionPlan = {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  interval: string | null;
+  messages: number;
+  description: string;
+  features: string[];
+};

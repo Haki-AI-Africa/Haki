@@ -101,7 +101,13 @@ export default function AudioRecorder({
     if (isLoading === true) {
       return <Spinner className="stroke-text-secondary" />;
     }
-    return <ListeningIcon className="stroke-text-secondary" />;
+    return (
+      <ListeningIcon
+        className={cn(
+          disabled ? 'stroke-text-secondary opacity-50' : 'stroke-text-secondary',
+        )}
+      />
+    );
   };
 
   return (
@@ -115,7 +121,7 @@ export default function AudioRecorder({
           onClick={isListening === true ? handleStopRecording : handleStartRecording}
           disabled={disabled}
           className={cn(
-            'flex size-9 items-center justify-center rounded-full p-1 transition-colors hover:bg-surface-hover',
+            'flex size-9 items-center justify-center rounded-full p-1 text-text-secondary transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:text-text-secondary/50 disabled:hover:bg-transparent',
           )}
           title={localize('com_ui_use_micrphone')}
           aria-pressed={isListening}

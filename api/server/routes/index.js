@@ -7,6 +7,7 @@ const messages = require('./messages');
 const memories = require('./memories');
 const presets = require('./presets');
 const prompts = require('./prompts');
+const subscription = require('./subscription');
 const balance = require('./balance');
 const actions = require('./actions');
 const banner = require('./banner');
@@ -45,6 +46,7 @@ module.exports = {
   actions,
   presets,
   balance,
+  subscription,
   messages,
   memories,
   endpoints,

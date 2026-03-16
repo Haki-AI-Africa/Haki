@@ -91,7 +91,18 @@ const errorMessages = {
     const plural = limit > 1 ? 's' : '';
     return `Only ${limit} message${plural} at a time. Please allow any other responses to complete before sending another message, or wait one minute.`;
   },
-  message_limit: (json: TMessageLimit) => {
+  message_limit: (json: TMessageLimit & { messagesUsed?: number; messageCredits?: number }) => {
+    if (json.messagesUsed !== undefined) {
+      return (
+        <>
+          {"You've reached your monthly message limit. "}
+          <a href="/pricing" style={{ textDecoration: 'underline' }}>
+            Upgrade your plan or purchase more messages
+          </a>
+          .
+        </>
+      );
+    }
     const { max, windowInMinutes } = json;
     const plural = max > 1 ? 's' : '';
     return `You hit the message limit. You have a cap of ${max} message${plural} per ${

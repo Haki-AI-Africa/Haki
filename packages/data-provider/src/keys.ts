@@ -62,6 +62,9 @@ export enum QueryKeys {
   mcpServer = 'mcpServer',
   /* Active Jobs */
   activeJobs = 'activeJobs',
+  /* Subscriptions */
+  subscription = 'subscription',
+  subscriptionPlans = 'subscriptionPlans',
 }
 
 // Dynamic query keys that require parameters
@@ -92,4 +95,6 @@ export enum MutationKeys {
   enableTwoFactor = 'enableTwoFactor',
   verifyTwoFactor = 'verifyTwoFactor',
   updateMemoryPreferences = 'updateMemoryPreferences',
+  initializePayment = 'initializePayment',
+  verifyPayment = 'verifyPayment',
 }

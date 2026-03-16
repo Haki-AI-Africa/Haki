@@ -11,6 +11,7 @@ const {
 } = require('@librechat/api');
 const { disposeClient, clientRegistry, requestDataMap } = require('~/server/cleanup');
 const { handleAbortError } = require('~/server/middleware');
+const { checkMessageLimit } = require('~/models/messageLimitMethods');
 const { logViolation } = require('~/cache');
 const { saveMessage } = require('~/models');
 
@@ -57,6 +58,8 @@ const ResumableAgentController = async (req, res, next, initializeClient, addTit
     await logViolation(req, res, ViolationTypes.CONCURRENT, violationInfo, violationInfo.score);
     return res.status(429).json(violationInfo);
   }
+
+  await checkMessageLimit({ req, res });
 
   // Generate conversationId upfront if not provided - streamId === conversationId always
   // Treat "new" as a placeholder that needs a real UUID (frontend may send "new" for new convos)
