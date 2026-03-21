@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback, useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { Button, useToastContext } from '@librechat/client';
+import { ChevronLeft } from 'lucide-react';
+import { Button, Spinner, useToastContext } from '@librechat/client';
 import { useWatch, useForm, FormProvider } from 'react-hook-form';
 import { useGetModelsQuery } from 'librechat-data-provider/react-query';
 import {
@@ -29,10 +29,14 @@ import { useAgentPanelContext } from '~/Providers/AgentPanelContext';
 import AgentPanelSkeleton from './AgentPanelSkeleton';
 import AdvancedPanel from './Advanced/AdvancedPanel';
 import { Panel, isEphemeralAgent } from '~/common';
+import AgentBasicConfig from './AgentBasicConfig';
+import AgentListView from './AgentListView';
 import AgentConfig from './AgentConfig';
 import AgentSelect from './AgentSelect';
 import AgentFooter from './AgentFooter';
 import ModelPanel from './ModelPanel';
+
+type WizardStep = 'list' | 'create' | 'edit';
 
 /* Helpers */
 function getUpdateToastMessage(
@@ -219,6 +223,7 @@ export default function AgentPanel() {
     agent_id: current_agent_id,
   } = useAgentPanelContext();
 
+  const [wizardStep, setWizardStep] = useState<WizardStep>('list');
   const { onSelect: onSelectAgent } = useSelectAgent();
 
   const modelsQuery = useGetModelsQuery({ refetchOnMount: 'always' });
@@ -319,7 +324,6 @@ export default function AgentPanel() {
   /* Mutations */
   const update = useUpdateAgentMutation({
     onMutate: () => {
-      // Store the current version before mutation
       previousVersionRef.current = agentQuery.data?.version;
     },
     onSuccess: async (data) => {
@@ -357,7 +361,6 @@ export default function AgentPanel() {
         setValue('avatar_preview', '', { shouldDirty: false });
       }
 
-      // Clear the ref after use
       previousVersionRef.current = undefined;
     },
     onError: (err) => {
@@ -389,6 +392,8 @@ export default function AgentPanel() {
           status: 'error',
         });
       }
+
+      setWizardStep('edit');
     },
     onError: (err) => {
       const error = err as Error;
@@ -476,6 +481,91 @@ export default function AgentPanel() {
     return canEdit;
   }, [agentQuery.data?.id, user?.role, canEdit]);
 
+  const handleListSelectAgent = useCallback(
+    (agentId: string) => {
+      setCurrentAgentId(agentId);
+      setWizardStep('edit');
+    },
+    [setCurrentAgentId],
+  );
+
+  const handleCreateNew = useCallback(() => {
+    reset(getDefaultAgentFormValues());
+    setCurrentAgentId(undefined);
+    setActivePanel(Panel.builder);
+    setWizardStep('create');
+  }, [reset, setCurrentAgentId, setActivePanel]);
+
+  const handleBackToList = useCallback(() => {
+    reset(getDefaultAgentFormValues());
+    setCurrentAgentId(undefined);
+    setActivePanel(Panel.builder);
+    setWizardStep('list');
+  }, [reset, setCurrentAgentId, setActivePanel]);
+
+  const isSaving = create.isLoading || update.isLoading || isAvatarUploadInFlight || uploadAvatarMutation.isLoading;
+
+  /* ─── Wizard Step 1: Agent List ─── */
+  if (wizardStep === 'list') {
+    return (
+      <FormProvider {...methods}>
+        <AgentListView
+          onSelectAgent={handleListSelectAgent}
+          onCreateAgent={handleCreateNew}
+        />
+      </FormProvider>
+    );
+  }
+
+  /* ─── Wizard Step 2: Create Agent (basic info) ─── */
+  if (wizardStep === 'create') {
+    return (
+      <FormProvider {...methods}>
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="scrollbar-gutter-stable h-auto w-full flex-shrink-0 overflow-y-hidden overflow-x-visible"
+          aria-label="Agent configuration form"
+        >
+          <div className="mx-1 mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleBackToList}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {localize('com_ui_back')}
+            </button>
+            <h3 className="text-base font-medium text-text-primary">
+              {localize('com_ui_create_new_agent')}
+            </h3>
+          </div>
+          {activePanel === Panel.model ? (
+            <ModelPanel models={models} providers={providers} setActivePanel={setActivePanel} />
+          ) : (
+            <AgentBasicConfig />
+          )}
+          {activePanel !== Panel.model && (
+            <div className="mb-1 flex w-full flex-col gap-2 px-4">
+              <button
+                className="btn btn-primary focus:shadow-outline flex h-9 w-full items-center justify-center px-4 py-2 font-semibold text-white hover:bg-green-600 focus:border-green-500"
+                type="submit"
+                disabled={isSaving}
+                aria-busy={isSaving}
+              >
+                {isSaving ? (
+                  <Spinner className="icon-md" aria-hidden="true" />
+                ) : (
+                  localize('com_ui_create')
+                )}
+              </button>
+            </div>
+          )}
+        </form>
+      </FormProvider>
+    );
+  }
+
+  /* ─── Wizard Step 3: Edit Agent (additional options / full edit) ─── */
   return (
     <FormProvider {...methods}>
       <form
@@ -484,35 +574,30 @@ export default function AgentPanel() {
         aria-label="Agent configuration form"
       >
         <div className="mx-1 mt-2 flex w-full flex-wrap gap-2">
-          <div className="w-full">
+          <div className="flex w-full items-center gap-2">
+            <button
+              type="button"
+              onClick={handleBackToList}
+              className="flex items-center gap-1 rounded-lg px-2 py-1 text-sm text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              {localize('com_ui_back')}
+            </button>
+          </div>
+          {/* Hidden AgentSelect to handle form population when agent data loads */}
+          <div className="hidden">
             <AgentSelect
               createMutation={create}
               agentQuery={agentQuery}
               setCurrentAgentId={setCurrentAgentId}
-              // The following is required to force re-render the component when the form's agent ID changes
-              // Also maintains ComboBox Focus for Accessibility
               selectedAgentId={agentQuery.isInitialLoading ? null : (current_agent_id ?? null)}
             />
           </div>
-          {/* Create + Select Button */}
           {agent_id && (
             <div className="flex w-full gap-2">
               <Button
-                type="button"
-                variant="outline"
-                className="w-full justify-center"
-                onClick={() => {
-                  reset(getDefaultAgentFormValues());
-                  setCurrentAgentId(undefined);
-                }}
-                disabled={agentQuery.isInitialLoading}
-                aria-label={localize('com_ui_create_new_agent')}
-              >
-                <Plus className="mr-1 h-4 w-4" aria-hidden="true" />
-                {localize('com_ui_create_new_agent')}
-              </Button>
-              <Button
                 variant="submit"
+                className="ml-auto"
                 disabled={isEphemeralAgent(agent_id) || agentQuery.isInitialLoading}
                 onClick={(e) => {
                   e.preventDefault();

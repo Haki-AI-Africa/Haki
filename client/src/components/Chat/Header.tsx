@@ -9,7 +9,9 @@ import ModelSelector from './Menus/Endpoints/ModelSelector';
 import { useGetStartupConfig } from '~/data-provider';
 import ExportAndShareMenu from './ExportAndShareMenu';
 import BookmarkMenu from './Menus/BookmarkMenu';
+import ToolsPanelModal from '~/components/SidePanel/ToolsPanelModal';
 import { TemporaryChat } from './TemporaryChat';
+import ToolsPanelButton from './ToolsPanelButton';
 import AddMultiConvo from './AddMultiConvo';
 import { useHasAccess } from '~/hooks';
 import { cn } from '~/utils';
@@ -41,6 +43,7 @@ function Header() {
   });
 
   const isSmallScreen = useMediaQuery('(max-width: 768px)');
+  const isHakiLegal = startupConfig?.configPath?.includes('haki-legal') ?? false;
 
   return (
     <div className="via-presentation/70 md:from-presentation/80 md:via-presentation/50 2xl:from-presentation/0 absolute top-0 z-10 flex h-14 w-full items-center justify-between bg-gradient-to-b from-presentation to-transparent p-2 font-semibold text-text-primary 2xl:via-transparent">
@@ -94,6 +97,7 @@ function Header() {
                     isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
                   />
                   {hasAccessToTemporaryChat === true && <TemporaryChat />}
+                  {!isHakiLegal && <ToolsPanelButton />}
                 </>
               )}
             </div>
@@ -106,11 +110,13 @@ function Header() {
               isSharedButtonEnabled={startupConfig?.sharedLinksEnabled ?? false}
             />
             {hasAccessToTemporaryChat === true && <TemporaryChat />}
+            {!isHakiLegal && <ToolsPanelButton />}
           </div>
         )}
       </div>
       {/* Empty div for spacing */}
       <div />
+      {!isHakiLegal && <ToolsPanelModal />}
     </div>
   );
 }
