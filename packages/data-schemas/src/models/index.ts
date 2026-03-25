@@ -28,6 +28,7 @@ import { createAccessRoleModel } from './accessRole';
 import { createAclEntryModel } from './aclEntry';
 import { createSubscriptionModel } from './subscription';
 import { createGroupModel } from './group';
+import { createTeamInvitationModel } from './teamInvitation';
 
 /**
  * Creates all database models for all collections
@@ -63,6 +64,7 @@ export function createModels(mongoose: typeof import('mongoose')) {
     AccessRole: createAccessRoleModel(mongoose),
     AclEntry: createAclEntryModel(mongoose),
     Group: createGroupModel(mongoose),
+    TeamInvitation: createTeamInvitationModel(mongoose),
     Subscription: createSubscriptionModel(mongoose),
   };
 }

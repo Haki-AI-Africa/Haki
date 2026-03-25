@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { AccessRoleIds, ResourceType } from 'librechat-data-provider';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { AccessRoleIds, PrincipalType, ResourceType } from 'librechat-data-provider';
 import { Share2Icon, Users, Link, CopyCheck, UserX, UserCheck } from 'lucide-react';
 import {
   Label,
@@ -23,8 +23,10 @@ import {
 } from '~/hooks';
 import UnifiedPeopleSearch from './PeoplePicker/UnifiedPeopleSearch';
 import PeoplePickerAdminSettings from './PeoplePickerAdminSettings';
+import TeamSharingToggle from './TeamSharingToggle';
 import PublicSharingToggle from './PublicSharingToggle';
 import { SelectedPrincipalsList } from './PeoplePicker';
+import { useGetMyTeam } from '~/data-provider';
 import { cn } from '~/utils';
 
 export default function GenericGrantAccessDialog({
@@ -51,6 +53,7 @@ export default function GenericGrantAccessDialog({
   const [isCopying, setIsCopying] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const canSharePublic = useCanSharePublic(resourceType);
+  const { data: myTeam } = useGetMyTeam();
   const { hasPeoplePickerAccess, peoplePickerTypeFilter } = usePeoplePickerPermissions();
 
   /** User can use the share dialog if they have people picker access OR can share publicly */
@@ -151,6 +154,76 @@ export default function GenericGrantAccessDialog({
     setPublicRole(role as AccessRoleIds);
     setHasChanges(true);
   };
+
+  // Team sharing: derive state from allShares
+  const isTeamShared = useMemo(() => {
+    if (!myTeam?._id) {
+      return false;
+    }
+    return allShares.some(
+      (s) => s.type === PrincipalType.GROUP && (s.id === myTeam._id || s.idOnTheSource === myTeam._id),
+    );
+  }, [allShares, myTeam]);
+
+  const teamRole = useMemo(() => {
+    if (!myTeam?._id) {
+      return undefined;
+    }
+    const teamShare = allShares.find(
+      (s) => s.type === PrincipalType.GROUP && (s.id === myTeam._id || s.idOnTheSource === myTeam._id),
+    );
+    return teamShare?.accessRoleId;
+  }, [allShares, myTeam]);
+
+  const handleTeamToggle = useCallback(
+    (shared: boolean) => {
+      if (!myTeam?._id) {
+        return;
+      }
+      if (shared) {
+        // Add team GROUP principal to allShares
+        setAllShares((prev) => [
+          ...prev,
+          {
+            type: PrincipalType.GROUP,
+            id: myTeam._id,
+            idOnTheSource: myTeam._id,
+            name: myTeam.name,
+            source: 'local',
+            accessRoleId: config?.defaultViewerRoleId,
+            isExisting: false,
+          } as TPrincipal,
+        ]);
+      } else {
+        // Remove team GROUP principal from allShares
+        setAllShares((prev) =>
+          prev.filter(
+            (s) =>
+              !(s.type === PrincipalType.GROUP && (s.id === myTeam._id || s.idOnTheSource === myTeam._id)),
+          ),
+        );
+      }
+      setHasChanges(true);
+    },
+    [myTeam, config],
+  );
+
+  const handleTeamRoleChange = useCallback(
+    (role: AccessRoleIds) => {
+      if (!myTeam?._id) {
+        return;
+      }
+      setAllShares((prev) =>
+        prev.map((s) =>
+          s.type === PrincipalType.GROUP && (s.id === myTeam._id || s.idOnTheSource === myTeam._id)
+            ? { ...s, accessRoleId: role }
+            : s,
+        ),
+      );
+      setHasChanges(true);
+    },
+    [myTeam],
+  );
 
   // Save all changes (unified save handler)
   const handleSave = async () => {
@@ -342,6 +415,21 @@ export default function GenericGrantAccessDialog({
               </div>
             )}
           </div>
+
+          {myTeam && (
+            <>
+              <div className="flex border-t border-border-light" />
+
+              {/* Team Sharing Section */}
+              <TeamSharingToggle
+                isTeamShared={isTeamShared}
+                teamRole={teamRole}
+                onTeamToggle={handleTeamToggle}
+                onTeamRoleChange={handleTeamRoleChange}
+                resourceType={resourceType}
+              />
+            </>
+          )}
 
           {canSharePublic && (
             <>

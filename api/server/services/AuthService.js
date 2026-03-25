@@ -100,6 +100,7 @@ const sendVerificationEmail = async (user) => {
     subject: 'Verify your email',
     payload: {
       appName: process.env.APP_TITLE || 'LibreChat',
+      domainClient: domains.client,
       name: user.name || user.username || user.email,
       verificationLink: verificationLink,
       year: new Date().getFullYear(),
@@ -298,6 +299,7 @@ const requestPasswordReset = async (req) => {
       subject: 'Password Reset Request',
       payload: {
         appName: process.env.APP_TITLE || 'LibreChat',
+      domainClient: domains.client,
         name: user.name || user.username || user.email,
         link: link,
         year: new Date().getFullYear(),
@@ -354,6 +356,7 @@ const resetPassword = async (userId, token, password) => {
       subject: 'Password Reset Successfully',
       payload: {
         appName: process.env.APP_TITLE || 'LibreChat',
+      domainClient: domains.client,
         name: user.name || user.username || user.email,
         year: new Date().getFullYear(),
       },
@@ -559,6 +562,7 @@ const resendVerificationEmail = async (req) => {
       subject: 'Verify your email',
       payload: {
         appName: process.env.APP_TITLE || 'LibreChat',
+      domainClient: domains.client,
         name: user.name || user.username || user.email,
         verificationLink: verificationLink,
         year: new Date().getFullYear(),

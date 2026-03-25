@@ -1,9 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import type { TPrincipal, PrincipalType, PrincipalSearchParams } from 'librechat-data-provider';
+import { Mail } from 'lucide-react';
+import { PrincipalType as PrincipalTypeEnum } from 'librechat-data-provider';
+import type { TPrincipal, TPrincipalSearchResult, PrincipalType, PrincipalSearchParams } from 'librechat-data-provider';
 import { useSearchPrincipalsQuery } from 'librechat-data-provider/react-query';
 import PeoplePickerSearchItem from './PeoplePickerSearchItem';
 import { SearchPicker } from './SearchPicker';
 import { useLocalize } from '~/hooks';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface UnifiedPeopleSearchProps {
   onAddPeople: (principals: TPrincipal[]) => void;
@@ -45,10 +49,28 @@ export default function UnifiedPeopleSearch({
   const selectableResults = useMemo(() => {
     const results = searchResponse?.results || [];
 
-    return results.filter(
+    const filtered = results.filter(
       (result) => result.idOnTheSource && !excludeIds.includes(result.idOnTheSource),
     );
-  }, [searchResponse?.results, excludeIds]);
+
+    // If query looks like an email and no matching result was found, offer "add by email" option
+    const trimmed = searchQuery.trim();
+    if (
+      EMAIL_REGEX.test(trimmed) &&
+      !filtered.some((r) => r.email?.toLowerCase() === trimmed.toLowerCase()) &&
+      !excludeIds.includes(trimmed)
+    ) {
+      filtered.push({
+        type: PrincipalTypeEnum.USER,
+        name: trimmed,
+        email: trimmed,
+        source: 'local' as const,
+        idOnTheSource: trimmed,
+      } as TPrincipalSearchResult);
+    }
+
+    return filtered;
+  }, [searchResponse?.results, excludeIds, searchQuery]);
 
   if (error) {
     console.error('Principal search error:', error);
@@ -68,7 +90,20 @@ export default function UnifiedPeopleSearch({
           key: s.idOnTheSource || 'unknown' + 'picker_key',
           value: s.idOnTheSource || 'Unknown',
         }))}
-        renderOptions={(o) => <PeoplePickerSearchItem principal={o} />}
+        renderOptions={(o) => {
+          // Show a distinct "invite by email" item for email-only entries (no id from the server)
+          if (!o.id && o.email && EMAIL_REGEX.test(o.email)) {
+            return (
+              <div className="flex items-center gap-2 px-2 py-1.5">
+                <Mail className="size-4 text-text-secondary" />
+                <span className="text-sm text-text-primary">
+                  {localize('com_ui_add_by_email', { email: o.email })}
+                </span>
+              </div>
+            );
+          }
+          return <PeoplePickerSearchItem principal={o} />;
+        }}
         placeholder={placeholder || localize('com_ui_search_default_placeholder')}
         query={searchQuery}
         onQueryChange={(query: string) => {

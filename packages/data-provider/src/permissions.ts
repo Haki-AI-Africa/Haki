@@ -79,6 +79,8 @@ export enum Permissions {
   VIEW_ROLES = 'VIEW_ROLES',
   /** Can share resources publicly (with everyone) */
   SHARE_PUBLIC = 'SHARE_PUBLIC',
+  /** Can share resources with the user's team */
+  SHARE_TEAM = 'SHARE_TEAM',
 }
 
 export const promptPermissionsSchema = z.object({
@@ -108,6 +110,7 @@ export const agentPermissionsSchema = z.object({
   [Permissions.CREATE]: z.boolean().default(true),
   [Permissions.SHARE]: z.boolean().default(false),
   [Permissions.SHARE_PUBLIC]: z.boolean().default(false),
+  [Permissions.SHARE_TEAM]: z.boolean().default(true),
 });
 export type TAgentPermissions = z.infer<typeof agentPermissionsSchema>;
 

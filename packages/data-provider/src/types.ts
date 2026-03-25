@@ -207,6 +207,8 @@ export type TUser = {
   personalization?: {
     memories?: boolean;
   };
+  /** The team (Group) this user belongs to */
+  teamId?: string;
   createdAt: string;
   updatedAt: string;
 };

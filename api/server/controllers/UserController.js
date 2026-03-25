@@ -20,6 +20,7 @@ const {
   updateUser,
   findToken,
   getFiles,
+  handleUserDeletion,
 } = require('~/models');
 const {
   ConversationTag,
@@ -284,8 +285,9 @@ const deleteUserController = async (req, res) => {
     await deleteUserPrompts(req, user.id); // delete user prompts
     await Action.deleteMany({ user: user.id }); // delete user actions
     await Token.deleteMany({ userId: user.id }); // delete user OAuth tokens
+    await handleUserDeletion(user.id); // handle team removal, admin succession, agent unsharing
     await Group.updateMany(
-      // remove user from all groups
+      // remove user from all non-team groups (e.g., Entra groups)
       { memberIds: user.id },
       { $pull: { memberIds: user.id } },
     );

@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { SettingsTabValues } from 'librechat-data-provider';
-import { MessageSquare, Command, DollarSign } from 'lucide-react';
+import { MessageSquare, Command, DollarSign, Users } from 'lucide-react';
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react';
 import {
   GearIcon,
@@ -21,6 +21,7 @@ import {
   Data,
   Balance,
   Account,
+  Team,
 } from './SettingsTabs';
 import usePersonalizationAccess from '~/hooks/usePersonalizationAccess';
 import { useLocalize, TranslationKeys } from '~/hooks';
@@ -42,6 +43,7 @@ export default function Settings({ open, onOpenChange }: TDialogProps) {
       SettingsTabValues.COMMANDS,
       SettingsTabValues.SPEECH,
       ...(hasAnyPersonalizationFeature ? [SettingsTabValues.PERSONALIZATION] : []),
+      SettingsTabValues.TEAM,
       SettingsTabValues.DATA,
       ...(startupConfig?.balance?.enabled ? [SettingsTabValues.BALANCE] : []),
       SettingsTabValues.ACCOUNT,
@@ -102,6 +104,11 @@ export default function Settings({ open, onOpenChange }: TDialogProps) {
           },
         ]
       : []),
+    {
+      value: SettingsTabValues.TEAM,
+      icon: <Users className="icon-sm" aria-hidden="true" />,
+      label: 'com_nav_setting_team' as TranslationKeys,
+    },
     {
       value: SettingsTabValues.DATA,
       icon: <DataIcon />,
@@ -240,6 +247,9 @@ export default function Settings({ open, onOpenChange }: TDialogProps) {
                         />
                       </Tabs.Content>
                     )}
+                    <Tabs.Content value={SettingsTabValues.TEAM} tabIndex={-1}>
+                      <Team />
+                    </Tabs.Content>
                     <Tabs.Content value={SettingsTabValues.DATA} tabIndex={-1}>
                       <Data />
                     </Tabs.Content>

@@ -67,6 +67,10 @@ export enum QueryKeys {
   subscriptionPlans = 'subscriptionPlans',
   /* Agent API Keys */
   agentApiKeys = 'agentApiKeys',
+  /* Teams */
+  myTeam = 'myTeam',
+  myInvitations = 'myInvitations',
+  teamInvitations = 'teamInvitations',
 }
 
 // Dynamic query keys that require parameters
@@ -101,4 +105,15 @@ export enum MutationKeys {
   updateMemoryPreferences = 'updateMemoryPreferences',
   initializePayment = 'initializePayment',
   verifyPayment = 'verifyPayment',
+  /* Teams */
+  createTeam = 'createTeam',
+  updateTeam = 'updateTeam',
+  deleteTeam = 'deleteTeam',
+  removeTeamMember = 'removeTeamMember',
+  promoteTeamAdmin = 'promoteTeamAdmin',
+  demoteTeamAdmin = 'demoteTeamAdmin',
+  sendTeamInvitation = 'sendTeamInvitation',
+  cancelTeamInvitation = 'cancelTeamInvitation',
+  acceptTeamInvitation = 'acceptTeamInvitation',
+  declineTeamInvitation = 'declineTeamInvitation',
 }

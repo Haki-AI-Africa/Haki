@@ -2,7 +2,8 @@ import { Types } from 'mongoose';
 import { PrincipalType } from 'librechat-data-provider';
 import type { TUser, TPrincipalSearchResult } from 'librechat-data-provider';
 import type { Model, ClientSession } from 'mongoose';
-import type { IGroup, IRole, IUser } from '~/types';
+import type { IGroup, IRole, IUser, ITeamInvitation } from '~/types';
+import { TeamInvitationStatus } from '~/types';
 
 export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
   /**
@@ -504,6 +505,7 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
     limitPerType: number = 10,
     typeFilter: Array<PrincipalType.USER | PrincipalType.GROUP | PrincipalType.ROLE> | null = null,
     session?: ClientSession,
+    teamId?: string | null,
   ): Promise<TPrincipalSearchResult[]> {
     if (!searchPattern || searchPattern.trim().length === 0) {
       return [];
@@ -518,9 +520,14 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
       /** For now, we'll use a direct query instead of searchUsers */
       const User = mongoose.models.User as Model<IUser>;
       const regex = new RegExp(trimmedPattern, 'i');
-      const userQuery = User.find({
+      const userFilter: Record<string, unknown> = {
         $or: [{ name: regex }, { email: regex }, { username: regex }],
-      })
+      };
+      // If the requesting user has a team, only show team members in the picker
+      if (teamId) {
+        userFilter.teamId = new mongoose.Types.ObjectId(teamId);
+      }
+      const userQuery = User.find(userFilter)
         .select(userFields)
         .limit(limitPerType);
 
@@ -589,6 +596,701 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
     return combined;
   }
 
+  // ==========================================
+  // Team Methods (local groups with ownership)
+  // ==========================================
+
+  /**
+   * Create a new team (local group with ownership)
+   * @param data - Team data
+   * @param session - Optional MongoDB session for transactions
+   * @returns The created team and updated user
+   */
+  async function createTeam(
+    data: { name: string; description?: string; createdBy: string },
+    session?: ClientSession,
+  ): Promise<IGroup> {
+    const User = mongoose.models.User as Model<IUser>;
+    const Group = mongoose.models.Group as Model<IGroup>;
+
+    const userId = data.createdBy;
+
+    // Check if user already has a team
+    const user = await User.findById(userId, 'teamId idOnTheSource').session(session ?? null).lean();
+    if (!user) {
+      throw new Error(`User not found: ${userId}`);
+    }
+    if ((user as IUser & { teamId?: Types.ObjectId }).teamId) {
+      throw new Error('User already belongs to a team');
+    }
+
+    const userIdStr = userId.toString();
+    const options = session ? { session } : {};
+
+    const [team] = await Group.create(
+      [
+        {
+          name: data.name,
+          description: data.description,
+          source: 'local',
+          createdBy: userIdStr,
+          admins: [userIdStr],
+          billingOwnerId: userIdStr,
+          memberIds: [userIdStr],
+          memberCount: 1,
+          plan: 'standard',
+        },
+      ],
+      options,
+    );
+
+    await User.findByIdAndUpdate(userId, { teamId: team._id }, { session: session ?? null });
+
+    return team;
+  }
+
+  /**
+   * Update a team's details (requires admin)
+   * @param teamId - The team ID
+   * @param userId - The requesting user ID (must be admin)
+   * @param updateData - Fields to update
+   * @param session - Optional MongoDB session
+   * @returns The updated team
+   */
+  async function updateTeam(
+    teamId: string | Types.ObjectId,
+    userId: string,
+    updateData: { name?: string; description?: string; avatar?: string },
+    session?: ClientSession,
+  ): Promise<IGroup | null> {
+    const Group = mongoose.models.Group as Model<IGroup>;
+
+    const team = await Group.findById(teamId).session(session ?? null).lean();
+    if (!team) {
+      throw new Error('Team not found');
+    }
+    if (!team.admins?.includes(userId.toString())) {
+      throw new Error('Only team admins can update the team');
+    }
+
+    return await Group.findByIdAndUpdate(
+      teamId,
+      { $set: updateData },
+      { new: true, session: session ?? null },
+    ).lean();
+  }
+
+  /**
+   * Delete a team and clean up all references
+   * @param teamId - The team ID
+   * @param userId - The requesting user ID (must be admin)
+   * @param session - Optional MongoDB session
+   */
+  async function deleteTeam(
+    teamId: string | Types.ObjectId,
+    userId: string,
+    session?: ClientSession,
+  ): Promise<void> {
+    const User = mongoose.models.User as Model<IUser>;
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const AclEntry = mongoose.models.AclEntry;
+    const TeamInvitation = mongoose.models.TeamInvitation as Model<ITeamInvitation>;
+
+    const team = await Group.findById(teamId).session(session ?? null).lean();
+    if (!team) {
+      throw new Error('Team not found');
+    }
+    if (!team.admins?.includes(userId.toString())) {
+      throw new Error('Only team admins can delete the team');
+    }
+
+    // Clear teamId from all members
+    await User.updateMany(
+      { teamId: new Types.ObjectId(teamId.toString()) },
+      { $unset: { teamId: 1 } },
+      { session: session ?? null },
+    );
+
+    // Remove all ACL entries that reference this team as a GROUP principal
+    if (AclEntry) {
+      await AclEntry.deleteMany(
+        { principalType: PrincipalType.GROUP, principalId: new Types.ObjectId(teamId.toString()) },
+        { session: session ?? null },
+      );
+    }
+
+    // Delete pending invitations
+    if (TeamInvitation) {
+      await TeamInvitation.deleteMany(
+        { teamId: new Types.ObjectId(teamId.toString()) },
+        { session: session ?? null },
+      );
+    }
+
+    // Delete the team
+    await Group.findByIdAndDelete(teamId, { session: session ?? null });
+  }
+
+  /**
+   * Check if a user is a team admin
+   * @param teamId - The team ID
+   * @param userId - The user ID to check
+   * @param session - Optional MongoDB session
+   * @returns True if user is an admin of the team
+   */
+  async function isTeamAdmin(
+    teamId: string | Types.ObjectId,
+    userId: string,
+    session?: ClientSession,
+  ): Promise<boolean> {
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const team = await Group.findById(teamId, 'admins').session(session ?? null).lean();
+    if (!team) {
+      return false;
+    }
+    return team.admins?.includes(userId.toString()) ?? false;
+  }
+
+  /**
+   * Get a user's team (local group they belong to)
+   * @param userId - The user ID
+   * @param session - Optional MongoDB session
+   * @returns The team or null
+   */
+  async function getUserTeam(
+    userId: string | Types.ObjectId,
+    session?: ClientSession,
+  ): Promise<IGroup | null> {
+    const User = mongoose.models.User as Model<IUser>;
+    const Group = mongoose.models.Group as Model<IGroup>;
+
+    const user = await User.findById(userId, 'teamId').session(session ?? null).lean();
+    if (!user || !(user as IUser & { teamId?: Types.ObjectId }).teamId) {
+      return null;
+    }
+
+    return await Group.findById(
+      (user as IUser & { teamId?: Types.ObjectId }).teamId,
+    ).session(session ?? null).lean();
+  }
+
+  /**
+   * Promote a team member to admin
+   * @param teamId - The team ID
+   * @param adminUserId - The requesting admin's user ID
+   * @param targetUserId - The user to promote
+   * @param session - Optional MongoDB session
+   */
+  async function addTeamAdmin(
+    teamId: string | Types.ObjectId,
+    adminUserId: string,
+    targetUserId: string,
+    session?: ClientSession,
+  ): Promise<IGroup | null> {
+    const Group = mongoose.models.Group as Model<IGroup>;
+
+    const team = await Group.findById(teamId).session(session ?? null).lean();
+    if (!team) {
+      throw new Error('Team not found');
+    }
+    if (!team.admins?.includes(adminUserId.toString())) {
+      throw new Error('Only team admins can promote members');
+    }
+    if (!team.memberIds?.includes(targetUserId.toString())) {
+      throw new Error('User is not a member of the team');
+    }
+
+    return await Group.findByIdAndUpdate(
+      teamId,
+      { $addToSet: { admins: targetUserId.toString() } },
+      { new: true, session: session ?? null },
+    ).lean();
+  }
+
+  /**
+   * Demote a team admin (cannot remove last admin)
+   * @param teamId - The team ID
+   * @param adminUserId - The requesting admin's user ID
+   * @param targetUserId - The admin to demote
+   * @param session - Optional MongoDB session
+   */
+  async function removeTeamAdmin(
+    teamId: string | Types.ObjectId,
+    adminUserId: string,
+    targetUserId: string,
+    session?: ClientSession,
+  ): Promise<IGroup | null> {
+    const Group = mongoose.models.Group as Model<IGroup>;
+
+    const team = await Group.findById(teamId).session(session ?? null).lean();
+    if (!team) {
+      throw new Error('Team not found');
+    }
+    if (!team.admins?.includes(adminUserId.toString())) {
+      throw new Error('Only team admins can demote admins');
+    }
+    if (!team.admins?.includes(targetUserId.toString())) {
+      throw new Error('User is not an admin');
+    }
+    if (team.admins.length <= 1) {
+      throw new Error('Cannot remove the last admin from the team');
+    }
+
+    return await Group.findByIdAndUpdate(
+      teamId,
+      { $pull: { admins: targetUserId.toString() } },
+      { new: true, session: session ?? null },
+    ).lean();
+  }
+
+  /**
+   * Remove a member from a team (admin only).
+   * Handles admin succession if removing the last admin.
+   * Unshares the member's agents from the team.
+   * @param teamId - The team ID
+   * @param adminUserId - The requesting admin's user ID
+   * @param targetUserId - The member to remove
+   * @param newAdminId - Optional: if removing the last admin, promote this user instead
+   * @param session - Optional MongoDB session
+   */
+  async function removeFromTeam(
+    teamId: string | Types.ObjectId,
+    adminUserId: string,
+    targetUserId: string,
+    newAdminId?: string,
+    session?: ClientSession,
+  ): Promise<IGroup | null> {
+    const User = mongoose.models.User as Model<IUser>;
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const AclEntry = mongoose.models.AclEntry;
+
+    const team = await Group.findById(teamId).session(session ?? null).lean();
+    if (!team) {
+      throw new Error('Team not found');
+    }
+    if (!team.admins?.includes(adminUserId.toString())) {
+      throw new Error('Only team admins can remove members');
+    }
+    if (!team.memberIds?.includes(targetUserId.toString())) {
+      throw new Error('User is not a member of the team');
+    }
+
+    const targetIsAdmin = team.admins?.includes(targetUserId.toString()) ?? false;
+
+    // Handle admin succession if removing the last admin
+    if (targetIsAdmin && team.admins.length <= 1) {
+      const remainingMembers = team.memberIds.filter((id) => id !== targetUserId.toString());
+      if (remainingMembers.length === 0) {
+        // No remaining members — delete the team instead
+        await deleteTeam(teamId, adminUserId, session);
+        return null;
+      }
+
+      const successor = newAdminId && remainingMembers.includes(newAdminId)
+        ? newAdminId
+        : remainingMembers[0]; // First (longest-standing) member
+
+      await Group.findByIdAndUpdate(
+        teamId,
+        { $addToSet: { admins: successor } },
+        { session: session ?? null },
+      );
+    }
+
+    // Unshare member's agents from the team (remove GROUP ACL entries they granted)
+    if (AclEntry) {
+      await AclEntry.deleteMany(
+        {
+          principalType: PrincipalType.GROUP,
+          principalId: new Types.ObjectId(teamId.toString()),
+          grantedBy: new Types.ObjectId(targetUserId),
+        },
+        { session: session ?? null },
+      );
+    }
+
+    // Remove from memberIds and admins
+    const updatedTeam = await Group.findByIdAndUpdate(
+      teamId,
+      {
+        $pull: { memberIds: targetUserId.toString(), admins: targetUserId.toString() },
+        $inc: { memberCount: -1 },
+      },
+      { new: true, session: session ?? null },
+    ).lean();
+
+    // Clear user's teamId
+    await User.findByIdAndUpdate(targetUserId, { $unset: { teamId: 1 } }, { session: session ?? null });
+
+    return updatedTeam;
+  }
+
+  /**
+   * Handle user account deletion: unshare agents, remove from team, handle admin succession
+   * @param userId - The user being deleted
+   * @param session - Optional MongoDB session
+   */
+  async function handleUserDeletion(
+    userId: string | Types.ObjectId,
+    session?: ClientSession,
+  ): Promise<void> {
+    const User = mongoose.models.User as Model<IUser>;
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const AclEntry = mongoose.models.AclEntry;
+    const TeamInvitation = mongoose.models.TeamInvitation as Model<ITeamInvitation>;
+
+    const userIdStr = userId.toString();
+    const user = await User.findById(userId, 'teamId').session(session ?? null).lean();
+    if (!user) {
+      return;
+    }
+
+    const teamId = (user as IUser & { teamId?: Types.ObjectId }).teamId;
+    if (!teamId) {
+      return;
+    }
+
+    const team = await Group.findById(teamId).session(session ?? null).lean();
+    if (!team) {
+      return;
+    }
+
+    // Unshare user's agents from the team
+    if (AclEntry) {
+      await AclEntry.deleteMany(
+        {
+          principalType: PrincipalType.GROUP,
+          principalId: teamId,
+          grantedBy: new Types.ObjectId(userIdStr),
+        },
+        { session: session ?? null },
+      );
+    }
+
+    const wasAdmin = team.admins?.includes(userIdStr) ?? false;
+
+    // Remove from team
+    await Group.findByIdAndUpdate(
+      teamId,
+      {
+        $pull: { memberIds: userIdStr, admins: userIdStr },
+        $inc: { memberCount: -1 },
+      },
+      { session: session ?? null },
+    );
+
+    // Handle admin succession
+    if (wasAdmin) {
+      const updatedTeam = await Group.findById(teamId).session(session ?? null).lean();
+      if (updatedTeam && (!updatedTeam.admins || updatedTeam.admins.length === 0)) {
+        if (updatedTeam.memberIds && updatedTeam.memberIds.length > 0) {
+          // Auto-promote the longest-standing member (first in array)
+          await Group.findByIdAndUpdate(
+            teamId,
+            { $addToSet: { admins: updatedTeam.memberIds[0] } },
+            { session: session ?? null },
+          );
+        }
+        // If no members left, team is empty — could be cleaned up separately
+      }
+    }
+
+    // Cancel any pending invitations sent by this user
+    if (TeamInvitation) {
+      await TeamInvitation.updateMany(
+        { invitedBy: userIdStr, status: TeamInvitationStatus.PENDING },
+        { $set: { status: TeamInvitationStatus.CANCELLED } },
+        { session: session ?? null },
+      );
+    }
+  }
+
+  // ==========================================
+  // Team Invitation Methods
+  // ==========================================
+
+  /**
+   * Create a team invitation
+   * @param teamId - The team ID
+   * @param invitedBy - The admin userId sending the invite
+   * @param invitedUserId - The userId being invited
+   * @param session - Optional MongoDB session
+   * @returns The created invitation
+   */
+  async function createTeamInvitation(
+    teamId: string | Types.ObjectId,
+    invitedBy: string,
+    invitedUserId: string,
+    session?: ClientSession,
+  ): Promise<ITeamInvitation> {
+    const TeamInvitation = mongoose.models.TeamInvitation as Model<ITeamInvitation>;
+    const Group = mongoose.models.Group as Model<IGroup>;
+
+    const team = await Group.findById(teamId).session(session ?? null).lean();
+    if (!team) {
+      throw new Error('Team not found');
+    }
+    if (!team.admins?.includes(invitedBy.toString())) {
+      throw new Error('Only team admins can send invitations');
+    }
+    if (team.memberIds?.includes(invitedUserId.toString())) {
+      throw new Error('User is already a member of this team');
+    }
+
+    // Check for existing pending invitation
+    const existing = await TeamInvitation.findOne({
+      teamId: new Types.ObjectId(teamId.toString()),
+      invitedUserId,
+      status: TeamInvitationStatus.PENDING,
+    }).session(session ?? null).lean();
+
+    if (existing) {
+      throw new Error('User already has a pending invitation to this team');
+    }
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    const options = session ? { session } : {};
+    const [invitation] = await TeamInvitation.create(
+      [
+        {
+          teamId: new Types.ObjectId(teamId.toString()),
+          invitedBy,
+          invitedUserId,
+          status: TeamInvitationStatus.PENDING,
+          expiresAt,
+        },
+      ],
+      options,
+    );
+
+    return invitation;
+  }
+
+  /**
+   * Accept a team invitation. Removes user from old team if any (including unsharing agents).
+   * @param invitationId - The invitation ID
+   * @param userId - The user accepting (must match invitedUserId)
+   * @param session - Optional MongoDB session
+   * @returns The updated invitation
+   */
+  async function acceptTeamInvitation(
+    invitationId: string | Types.ObjectId,
+    userId: string,
+    session?: ClientSession,
+  ): Promise<ITeamInvitation> {
+    const User = mongoose.models.User as Model<IUser>;
+    const Group = mongoose.models.Group as Model<IGroup>;
+    const TeamInvitation = mongoose.models.TeamInvitation as Model<ITeamInvitation>;
+    const AclEntry = mongoose.models.AclEntry;
+
+    const invitation = await TeamInvitation.findById(invitationId).session(session ?? null).lean();
+    if (!invitation) {
+      throw new Error('Invitation not found');
+    }
+    if (invitation.invitedUserId !== userId.toString()) {
+      throw new Error('This invitation is not for you');
+    }
+    if (invitation.status !== TeamInvitationStatus.PENDING) {
+      throw new Error(`Invitation has already been ${invitation.status}`);
+    }
+    if (invitation.expiresAt < new Date()) {
+      throw new Error('Invitation has expired');
+    }
+
+    const userIdStr = userId.toString();
+
+    // Check if user is currently in a team — if so, leave it first
+    const user = await User.findById(userId, 'teamId').session(session ?? null).lean();
+    const currentTeamId = (user as IUser & { teamId?: Types.ObjectId })?.teamId;
+
+    if (currentTeamId) {
+      const currentTeam = await Group.findById(currentTeamId).session(session ?? null).lean();
+      if (currentTeam) {
+        // Unshare user's agents from old team
+        if (AclEntry) {
+          await AclEntry.deleteMany(
+            {
+              principalType: PrincipalType.GROUP,
+              principalId: currentTeamId,
+              grantedBy: new Types.ObjectId(userIdStr),
+            },
+            { session: session ?? null },
+          );
+        }
+
+        // Handle admin succession in old team
+        const wasAdmin = currentTeam.admins?.includes(userIdStr) ?? false;
+        await Group.findByIdAndUpdate(
+          currentTeamId,
+          {
+            $pull: { memberIds: userIdStr, admins: userIdStr },
+            $inc: { memberCount: -1 },
+          },
+          { session: session ?? null },
+        );
+
+        if (wasAdmin) {
+          const updatedOldTeam = await Group.findById(currentTeamId).session(session ?? null).lean();
+          if (updatedOldTeam && (!updatedOldTeam.admins || updatedOldTeam.admins.length === 0)) {
+            if (updatedOldTeam.memberIds && updatedOldTeam.memberIds.length > 0) {
+              await Group.findByIdAndUpdate(
+                currentTeamId,
+                { $addToSet: { admins: updatedOldTeam.memberIds[0] } },
+                { session: session ?? null },
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Add user to new team
+    await Group.findByIdAndUpdate(
+      invitation.teamId,
+      {
+        $addToSet: { memberIds: userIdStr },
+        $inc: { memberCount: 1 },
+      },
+      { session: session ?? null },
+    );
+
+    // Set user's teamId
+    await User.findByIdAndUpdate(userId, { teamId: invitation.teamId }, { session: session ?? null });
+
+    // Update invitation status
+    const updatedInvitation = await TeamInvitation.findByIdAndUpdate(
+      invitationId,
+      { $set: { status: TeamInvitationStatus.ACCEPTED } },
+      { new: true, session: session ?? null },
+    ).lean();
+
+    // Cancel any other pending invitations for this user
+    await TeamInvitation.updateMany(
+      {
+        invitedUserId: userIdStr,
+        status: TeamInvitationStatus.PENDING,
+        _id: { $ne: new Types.ObjectId(invitationId.toString()) },
+      },
+      { $set: { status: TeamInvitationStatus.CANCELLED } },
+      { session: session ?? null },
+    );
+
+    return updatedInvitation as ITeamInvitation;
+  }
+
+  /**
+   * Decline a team invitation
+   * @param invitationId - The invitation ID
+   * @param userId - The user declining (must match invitedUserId)
+   * @param session - Optional MongoDB session
+   */
+  async function declineTeamInvitation(
+    invitationId: string | Types.ObjectId,
+    userId: string,
+    session?: ClientSession,
+  ): Promise<ITeamInvitation> {
+    const TeamInvitation = mongoose.models.TeamInvitation as Model<ITeamInvitation>;
+
+    const invitation = await TeamInvitation.findById(invitationId).session(session ?? null).lean();
+    if (!invitation) {
+      throw new Error('Invitation not found');
+    }
+    if (invitation.invitedUserId !== userId.toString()) {
+      throw new Error('This invitation is not for you');
+    }
+    if (invitation.status !== TeamInvitationStatus.PENDING) {
+      throw new Error(`Invitation has already been ${invitation.status}`);
+    }
+
+    const updated = await TeamInvitation.findByIdAndUpdate(
+      invitationId,
+      { $set: { status: TeamInvitationStatus.DECLINED } },
+      { new: true, session: session ?? null },
+    ).lean();
+
+    return updated as ITeamInvitation;
+  }
+
+  /**
+   * Cancel a pending invitation (admin only)
+   * @param invitationId - The invitation ID
+   * @param adminUserId - The admin cancelling
+   * @param session - Optional MongoDB session
+   */
+  async function cancelTeamInvitation(
+    invitationId: string | Types.ObjectId,
+    adminUserId: string,
+    session?: ClientSession,
+  ): Promise<ITeamInvitation> {
+    const TeamInvitation = mongoose.models.TeamInvitation as Model<ITeamInvitation>;
+    const Group = mongoose.models.Group as Model<IGroup>;
+
+    const invitation = await TeamInvitation.findById(invitationId).session(session ?? null).lean();
+    if (!invitation) {
+      throw new Error('Invitation not found');
+    }
+    if (invitation.status !== TeamInvitationStatus.PENDING) {
+      throw new Error(`Invitation has already been ${invitation.status}`);
+    }
+
+    const team = await Group.findById(invitation.teamId, 'admins').session(session ?? null).lean();
+    if (!team || !team.admins?.includes(adminUserId.toString())) {
+      throw new Error('Only team admins can cancel invitations');
+    }
+
+    const updated = await TeamInvitation.findByIdAndUpdate(
+      invitationId,
+      { $set: { status: TeamInvitationStatus.CANCELLED } },
+      { new: true, session: session ?? null },
+    ).lean();
+
+    return updated as ITeamInvitation;
+  }
+
+  /**
+   * Get pending invitations for a user
+   * @param userId - The user ID
+   * @param session - Optional MongoDB session
+   * @returns Array of pending invitations with team info
+   */
+  async function getPendingInvitations(
+    userId: string,
+    session?: ClientSession,
+  ): Promise<ITeamInvitation[]> {
+    const TeamInvitation = mongoose.models.TeamInvitation as Model<ITeamInvitation>;
+
+    return await TeamInvitation.find({
+      invitedUserId: userId,
+      status: TeamInvitationStatus.PENDING,
+      expiresAt: { $gt: new Date() },
+    })
+      .populate('teamId', 'name description avatar memberCount')
+      .session(session ?? null)
+      .lean();
+  }
+
+  /**
+   * Get all invitations for a team (admin use)
+   * @param teamId - The team ID
+   * @param session - Optional MongoDB session
+   * @returns Array of invitations
+   */
+  async function getTeamInvitations(
+    teamId: string | Types.ObjectId,
+    session?: ClientSession,
+  ): Promise<ITeamInvitation[]> {
+    const TeamInvitation = mongoose.models.TeamInvitation as Model<ITeamInvitation>;
+
+    return await TeamInvitation.find({
+      teamId: new Types.ObjectId(teamId.toString()),
+      status: TeamInvitationStatus.PENDING,
+    })
+      .session(session ?? null)
+      .lean();
+  }
+
   return {
     findGroupById,
     findGroupByExternalId,
@@ -604,6 +1306,23 @@ export function createUserGroupMethods(mongoose: typeof import('mongoose')) {
     searchPrincipals,
     calculateRelevanceScore,
     sortPrincipalsByRelevance,
+    // Team methods
+    createTeam,
+    updateTeam,
+    deleteTeam,
+    isTeamAdmin,
+    getUserTeam,
+    addTeamAdmin,
+    removeTeamAdmin,
+    removeFromTeam,
+    handleUserDeletion,
+    // Team invitation methods
+    createTeamInvitation,
+    acceptTeamInvitation,
+    declineTeamInvitation,
+    cancelTeamInvitation,
+    getPendingInvitations,
+    getTeamInvitations,
   };
 }
 

@@ -209,7 +209,7 @@ mcpSettings:
 
 # Example MCP Servers Object Structure
 mcpServers:
-  haki_legal:
+  haki-legal:
     type: streamable-http
     url: https://hakilegal-omy2ykv3tq-bq.a.run.app/mcp
     chatMenu: false

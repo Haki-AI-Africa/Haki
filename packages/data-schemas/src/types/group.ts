@@ -12,6 +12,16 @@ export interface IGroup extends Document {
   source: 'local' | 'entra';
   /** External ID (e.g., Entra ID) - required for non-local sources */
   idOnTheSource?: string;
+  /** userId of team creator (local teams only) */
+  createdBy?: string;
+  /** userIds who can manage the team */
+  admins?: string[];
+  /** userId responsible for billing (defaults to createdBy) */
+  billingOwnerId?: string;
+  /** Billing plan identifier */
+  plan?: string;
+  /** Denormalized member count for billing queries */
+  memberCount?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -24,6 +34,10 @@ export interface CreateGroupRequest {
   memberIds?: string[];
   source: 'local' | 'entra';
   idOnTheSource?: string;
+  createdBy?: string;
+  admins?: string[];
+  billingOwnerId?: string;
+  plan?: string;
 }
 
 export interface UpdateGroupRequest {
@@ -34,6 +48,9 @@ export interface UpdateGroupRequest {
   memberIds?: string[];
   source?: 'local' | 'entra' | 'ldap';
   idOnTheSource?: string;
+  admins?: string[];
+  billingOwnerId?: string;
+  plan?: string;
 }
 
 export interface GroupFilterOptions extends CursorPaginationParams {

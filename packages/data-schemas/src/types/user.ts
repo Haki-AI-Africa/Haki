@@ -49,6 +49,8 @@ export interface IUser extends Document {
   updatedAt?: Date;
   /** Field for external source identification (for consistency with TPrincipal schema) */
   idOnTheSource?: string;
+  /** The team (Group) this user belongs to */
+  teamId?: string;
 }
 
 export interface BalanceConfig {

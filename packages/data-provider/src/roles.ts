@@ -64,6 +64,7 @@ const defaultRolesSchema = z.object({
         [Permissions.CREATE]: z.boolean().default(true),
         [Permissions.SHARE]: z.boolean().default(true),
         [Permissions.SHARE_PUBLIC]: z.boolean().default(true),
+        [Permissions.SHARE_TEAM]: z.boolean().default(true),
       }),
       [PermissionTypes.MULTI_CONVO]: multiConvoPermissionsSchema.extend({
         [Permissions.USE]: z.boolean().default(true),
@@ -136,6 +137,7 @@ export const roleDefaults = defaultRolesSchema.parse({
         [Permissions.CREATE]: true,
         [Permissions.SHARE]: true,
         [Permissions.SHARE_PUBLIC]: true,
+        [Permissions.SHARE_TEAM]: true,
       },
       [PermissionTypes.MULTI_CONVO]: {
         [Permissions.USE]: true,

@@ -166,6 +166,13 @@ const userSchema = new Schema<IUser>(
       type: String,
       sparse: true,
     },
+    /** The team (Group) this user belongs to */
+    teamId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Group',
+      sparse: true,
+      index: true,
+    },
   },
   { timestamps: true },
 );

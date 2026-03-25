@@ -36,9 +36,11 @@ const {
 } = require('~/models/Agent');
 const {
   findPubliclyAccessibleResources,
+  findTeamSharedResources,
   getResourcePermissionsMap,
   findAccessibleResources,
   hasPublicPermission,
+  isSharedWithTeam,
   grantPermission,
 } = require('~/server/services/PermissionService');
 const { getStrategyFunctions } = require('~/server/services/Files/strategies');
@@ -299,6 +301,18 @@ const getAgentHandler = async (req, res, expandProperties = false) => {
     });
     agent.isPublic = isPublic;
 
+    // Check if agent is shared with the user's team
+    const userTeamId = req.user.teamId;
+    if (userTeamId) {
+      agent.isTeamShared = await isSharedWithTeam({
+        resourceId: agent._id.toString(),
+        resourceType: ResourceType.AGENT,
+        teamId: userTeamId.toString(),
+      });
+    } else {
+      agent.isTeamShared = false;
+    }
+
     if (agent.author !== author) {
       delete agent.author;
     }
@@ -318,6 +332,7 @@ const getAgentHandler = async (req, res, expandProperties = false) => {
         // @deprecated - isCollaborative replaced by ACL permissions
         isCollaborative: agent.isCollaborative,
         isPublic: agent.isPublic,
+        isTeamShared: agent.isTeamShared,
         version: agent.version,
         // Safe metadata
         createdAt: agent.createdAt,
@@ -728,11 +743,22 @@ const getListAgentsHandler = async (req, res) => {
 
     const publicSet = new Set(publiclyAccessibleIds.map((oid) => oid.toString()));
 
+    // Build team-shared set if user has a team
+    let teamSharedSet = new Set();
+    const userTeamId = req.user.teamId;
+    if (userTeamId) {
+      const teamSharedIds = await findTeamSharedResources(userTeamId.toString(), ResourceType.AGENT);
+      teamSharedSet = new Set(teamSharedIds.map((oid) => oid.toString()));
+    }
+
     const urlCache = cachedRefresh?.urlCache;
     data.data = agents.map((agent) => {
       try {
         if (agent?._id && publicSet.has(agent._id.toString())) {
           agent.isPublic = true;
+        }
+        if (agent?._id && teamSharedSet.has(agent._id.toString())) {
+          agent.isTeamShared = true;
         }
         if (
           urlCache &&

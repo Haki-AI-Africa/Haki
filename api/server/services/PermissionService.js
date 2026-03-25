@@ -359,6 +359,15 @@ const ensurePrincipalExists = async function (principal) {
     return userId.toString();
   }
 
+  // Handle local users added by email (e.g. sharing with someone outside the team)
+  if (principal.type === PrincipalType.USER && principal.email) {
+    const existingUser = await findUser({ email: principal.email.toLowerCase() });
+    if (existingUser) {
+      return existingUser._id.toString();
+    }
+    throw new Error(`No user found with email: ${principal.email}`);
+  }
+
   if (principal.type === PrincipalType.GROUP) {
     throw new Error('Group principals should be handled by group-specific methods');
   }
@@ -826,6 +835,82 @@ const removeAllPermissions = async ({ resourceType, resourceId }) => {
   }
 };
 
+/**
+ * Share a resource with a team (creates GROUP ACL entry)
+ * @param {Object} params
+ * @param {string} params.resourceId - The resource ID
+ * @param {string} params.resourceType - The resource type
+ * @param {string} params.teamId - The team (group) ID
+ * @param {string} params.accessRoleId - The access role to grant
+ * @param {string} params.grantedBy - The user granting the permission
+ * @param {mongoose.ClientSession} [params.session] - Optional session
+ * @returns {Promise<Object>} The created ACL entry
+ */
+const shareWithTeam = async ({ resourceId, resourceType, teamId, accessRoleId, grantedBy, session }) => {
+  return await grantPermission({
+    principalType: PrincipalType.GROUP,
+    principalId: new mongoose.Types.ObjectId(teamId),
+    resourceType,
+    resourceId,
+    accessRoleId,
+    grantedBy,
+    session,
+  });
+};
+
+/**
+ * Unshare a resource from a team (removes GROUP ACL entry)
+ * @param {Object} params
+ * @param {string} params.resourceId - The resource ID
+ * @param {string} params.resourceType - The resource type
+ * @param {string} params.teamId - The team (group) ID
+ * @returns {Promise<Object>} Result of the deletion
+ */
+const unshareWithTeam = async ({ resourceId, resourceType, teamId }) => {
+  return await AclEntry.deleteMany({
+    principalType: PrincipalType.GROUP,
+    principalId: new mongoose.Types.ObjectId(teamId),
+    resourceType,
+    resourceId: new mongoose.Types.ObjectId(resourceId),
+  });
+};
+
+/**
+ * Check if a resource is shared with a specific team
+ * @param {Object} params
+ * @param {string} params.resourceId - The resource ID
+ * @param {string} params.resourceType - The resource type
+ * @param {string} params.teamId - The team (group) ID
+ * @returns {Promise<boolean>} Whether the resource is shared with the team
+ */
+const isSharedWithTeam = async ({ resourceId, resourceType, teamId }) => {
+  const entry = await AclEntry.findOne({
+    principalType: PrincipalType.GROUP,
+    principalId: new mongoose.Types.ObjectId(teamId),
+    resourceType,
+    resourceId: new mongoose.Types.ObjectId(resourceId),
+  }).lean();
+  return !!entry;
+};
+
+/**
+ * Find all resources shared with a specific team
+ * @param {string} teamId - The team (group) ID
+ * @param {string} resourceType - The resource type
+ * @returns {Promise<string[]>} Array of resource IDs
+ */
+const findTeamSharedResources = async (teamId, resourceType) => {
+  validateResourceType(resourceType);
+  const entries = await AclEntry.find({
+    principalType: PrincipalType.GROUP,
+    principalId: new mongoose.Types.ObjectId(teamId),
+    resourceType,
+  })
+    .distinct('resourceId')
+    .lean();
+  return entries;
+};
+
 module.exports = {
   grantPermission,
   checkPermission,
@@ -840,4 +925,8 @@ module.exports = {
   ensureGroupPrincipalExists,
   syncUserEntraGroupMemberships,
   removeAllPermissions,
+  shareWithTeam,
+  unshareWithTeam,
+  isSharedWithTeam,
+  findTeamSharedResources,
 };

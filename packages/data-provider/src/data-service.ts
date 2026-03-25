@@ -1103,3 +1103,72 @@ export interface ActiveJobsResponse {
 export const getActiveJobs = (): Promise<ActiveJobsResponse> => {
   return request.get(endpoints.activeJobs());
 };
+
+/* Teams */
+import type * as teams from './types/teams';
+
+export function getMyTeam(): Promise<teams.TTeam | null> {
+  return request.get(endpoints.myTeam());
+}
+
+export function createTeam(data: teams.TCreateTeamRequest): Promise<teams.TTeam> {
+  return request.post(endpoints.createTeamEndpoint(), data);
+}
+
+export function getTeamById(teamId: string): Promise<teams.TTeam> {
+  return request.get(endpoints.teamById(teamId));
+}
+
+export function updateTeam(teamId: string, data: teams.TUpdateTeamRequest): Promise<teams.TTeam> {
+  return request.patch(endpoints.teamById(teamId), data);
+}
+
+export function deleteTeam(teamId: string): Promise<{ message: string }> {
+  return request.delete(endpoints.teamById(teamId));
+}
+
+export function removeTeamMember(
+  teamId: string,
+  userId: string,
+  data?: teams.TRemoveMemberRequest,
+): Promise<teams.TTeam> {
+  return request.deleteWithOptions(endpoints.teamMembers(teamId, userId), { data });
+}
+
+export function promoteTeamAdmin(teamId: string, data: teams.TPromoteAdminRequest): Promise<teams.TTeam> {
+  return request.post(endpoints.teamAdmins(teamId), data);
+}
+
+export function demoteTeamAdmin(teamId: string, userId: string): Promise<teams.TTeam> {
+  return request.delete(endpoints.teamAdminById(teamId, userId));
+}
+
+export function sendTeamInvitation(
+  teamId: string,
+  data: teams.TSendInvitationRequest,
+): Promise<teams.TTeamInvitation> {
+  return request.post(endpoints.teamInvitations(teamId), data);
+}
+
+export function cancelTeamInvitation(
+  teamId: string,
+  invitationId: string,
+): Promise<teams.TTeamInvitation> {
+  return request.delete(endpoints.teamInvitationById(teamId, invitationId));
+}
+
+export function getTeamInvitations(teamId: string): Promise<teams.TTeamInvitation[]> {
+  return request.get(endpoints.teamInvitations(teamId));
+}
+
+export function getMyInvitations(): Promise<teams.TTeamInvitation[]> {
+  return request.get(endpoints.myInvitations());
+}
+
+export function acceptTeamInvitation(invitationId: string): Promise<teams.TTeamInvitation> {
+  return request.post(endpoints.acceptInvitation(invitationId), {});
+}
+
+export function declineTeamInvitation(invitationId: string): Promise<teams.TTeamInvitation> {
+  return request.post(endpoints.declineInvitation(invitationId), {});
+}

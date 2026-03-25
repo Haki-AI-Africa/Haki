@@ -399,7 +399,8 @@ const searchPrincipals = async (req, res) => {
       typeFilters = validTypes.length > 0 ? validTypes : null;
     }
 
-    const localResults = await searchLocalPrincipals(query.trim(), searchLimit, typeFilters);
+    const teamId = req.user.teamId ? req.user.teamId.toString() : null;
+    const localResults = await searchLocalPrincipals(query.trim(), searchLimit, typeFilters, null, teamId);
     let allPrincipals = [...localResults];
 
     const useEntraId = entraIdPrincipalFeatureEnabled(req.user);

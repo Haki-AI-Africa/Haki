@@ -198,6 +198,11 @@ actions:
     
     # - 'http://10.225.26.25:7894'  # Internal IP with protocol/port (uncomment if needed)
 
+mcpSettings:
+  allowedDomains:
+    - 'https://africa-south1-haki-one.cloudfunctions.net'
+    - 'https://hakilegal-omy2ykv3tq-bq.a.run.app'
+
 # MCP Server domain restrictions for remote transports (SSE, WebSocket, HTTP)
 # SECURITY: If not configured, SSRF targets are blocked (localhost, private IPs, .internal/.local TLDs).
 # To allow internal targets like host.docker.internal, you MUST explicitly add them to allowedDomains.
@@ -211,13 +216,14 @@ actions:
 #     - 'https://secure.api.com'  # Protocol-restricted
 #     - 'http://internal:8080'    # Protocol and port restricted
 
+mcpServers:
+  haki-legal:
+    type: streamable-http
+    url: https://hakilegal-omy2ykv3tq-bq.a.run.app/mcp
+    timeout: 120000
+
 # Example MCP Servers Object Structure
 # mcpServers:
-#   haki-legal:
-#     type: stdio
-#     command: node
-#     args:
-#       - packages/haki-legal/src/index.js
 #   everything:
 #     # type: sse # type can optionally be omitted
 #     url: http://localhost:3001/sse

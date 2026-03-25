@@ -441,6 +441,25 @@ export const getEffectivePermissions = (resourceType: ResourceType, resourceId: 
 export const getAllEffectivePermissions = (resourceType: ResourceType) =>
   `${BASE_URL}/api/permissions/${resourceType}/effective/all`;
 
+/* Teams */
+const teamsRoot = `${BASE_URL}/api/teams`;
+export const myTeam = () => `${teamsRoot}/my`;
+export const createTeamEndpoint = () => teamsRoot;
+export const teamById = (teamId: string) => `${teamsRoot}/${teamId}`;
+export const teamMembers = (teamId: string, userId: string) =>
+  `${teamsRoot}/${teamId}/members/${userId}`;
+export const teamAdmins = (teamId: string) => `${teamsRoot}/${teamId}/admins`;
+export const teamAdminById = (teamId: string, userId: string) =>
+  `${teamsRoot}/${teamId}/admins/${userId}`;
+export const teamInvitations = (teamId: string) => `${teamsRoot}/${teamId}/invitations`;
+export const teamInvitationById = (teamId: string, invitationId: string) =>
+  `${teamsRoot}/${teamId}/invitations/${invitationId}`;
+export const myInvitations = () => `${teamsRoot}/invitations/my`;
+export const acceptInvitation = (invitationId: string) =>
+  `${teamsRoot}/invitations/${invitationId}/accept`;
+export const declineInvitation = (invitationId: string) =>
+  `${teamsRoot}/invitations/${invitationId}/decline`;
+
 // SharePoint Graph API Token
 export const graphToken = (scopes: string) =>
   `${BASE_URL}/api/auth/graph-token?scopes=${encodeURIComponent(scopes)}`;
