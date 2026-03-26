@@ -475,7 +475,7 @@ modelSpecs:
       # No 'group' field - appears as standalone item at top level (not nested)
       preset:
         endpoint: "agents"
-        model: "agent_Dz9DK5ALMkuAMwvdEbqAN"
+        agent_id: "agent_Dz9DK5ALMkuAMwvdEbqAN"
 
 # fileConfig:
 #   endpoints:
