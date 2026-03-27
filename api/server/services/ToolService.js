@@ -18,6 +18,7 @@ const {
   isActionDomainAllowed,
   buildWebSearchContext,
   buildImageToolContext,
+  buildMCPCitationContext,
   buildToolClassification,
 } = require('@librechat/api');
 const {
@@ -785,6 +786,15 @@ async function loadToolDefinitionsWrapper({ req, res, agent, streamId = null, to
       if (toolContext) {
         toolContextMap.gemini_image_gen = toolContext;
       }
+    }
+  }
+
+  // Add citation context for MCP tools that support the citations:// protocol.
+  // Any MCP tool whose name contains "haki_legal_search" gets citation instructions
+  // so the LLM knows to output \ue202 citation markers referencing the structured sources.
+  for (const toolName of filteredTools) {
+    if (toolName.includes(Constants.mcp_delimiter) && toolName.startsWith('haki_legal_search')) {
+      toolContextMap[toolName] = buildMCPCitationContext(toolName);
     }
   }
 

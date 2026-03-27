@@ -60,6 +60,10 @@ function parseAsString(result: t.MCPToolCallResponse): string {
         return item.text;
       }
       if (item.type === 'resource') {
+        // Skip citation resources — they are metadata for the citation pipeline, not user-facing text
+        if (item.resource.uri.startsWith('citations://')) {
+          return '';
+        }
         const resourceText = [];
         if ('text' in item.resource && item.resource.text != null && item.resource.text) {
           resourceText.push(item.resource.text);
@@ -106,6 +110,7 @@ export function formatToolContent(
   const imageUrls: t.FormattedContent[] = [];
   let currentTextBlock = '';
   const uiResources: UIResource[] = [];
+  let citationData: Record<string, unknown> | undefined;
 
   type ContentHandler = undefined | ((item: t.ToolContentPart) => void);
 
@@ -137,10 +142,26 @@ export function formatToolContent(
     },
 
     resource: (item) => {
+      const isCitationResource = item.resource.uri.startsWith('citations://');
       const isUiResource = item.resource.uri.startsWith('ui://');
       const resourceText: string[] = [];
 
-      if (isUiResource) {
+      if (isCitationResource) {
+        // Parse structured citation data from MCP tools (e.g., haki_legal_search)
+        // This data gets added to the artifact as web_search data so LibreChat's
+        // existing citation pipeline (callbacks.js -> attachment -> client) handles it.
+        if ('text' in item.resource && item.resource.text) {
+          try {
+            const parsed = JSON.parse(item.resource.text as string);
+            if (parsed.type === 'web_search_citations') {
+              citationData = parsed;
+            }
+          } catch {
+            // ignore parse errors
+          }
+        }
+        return;
+      } else if (isUiResource) {
         const contentToHash =
           'text' in item.resource && item.resource.text && typeof item.resource.text === 'string'
             ? item.resource.text
@@ -208,6 +229,20 @@ UI Resource Markers Available:
     artifacts = {
       ...artifacts,
       [Tools.ui_resources]: { data: uiResources },
+    };
+  }
+
+  if (citationData) {
+    const cd = citationData as Record<string, unknown>;
+    artifacts = {
+      ...artifacts,
+      [Tools.web_search]: {
+        turn: (cd.turn as number) ?? 0,
+        organic: (cd.organic ?? []) as t.FormattedContent[],
+        topStories: [] as t.FormattedContent[],
+        images: [] as t.FormattedContent[],
+        references: (cd.references ?? []) as t.FormattedContent[],
+      },
     };
   }
 

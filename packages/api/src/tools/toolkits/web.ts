@@ -1,5 +1,32 @@
 import { Tools, replaceSpecialVars } from 'librechat-data-provider';
 
+/**
+ * Builds citation format instructions for MCP tools that return structured
+ * citation data via the citations:// resource URI protocol.
+ * The tool must return a resource with uri "citations://..." containing
+ * SearchResultData-compatible JSON so callbacks.js streams it as an attachment.
+ */
+export function buildMCPCitationContext(toolKey: string): string {
+  return `# \`${toolKey}\` — Citation Format:
+After receiving results from this tool, cite every legal source you reference.
+
+**CITATION FORMAT - UNICODE ESCAPE SEQUENCES ONLY:**
+Use these EXACT escape sequences (copy verbatim): \\ue202 (before each anchor), \\ue200 (group start), \\ue201 (group end), \\ue203 (highlight start), \\ue204 (highlight end)
+
+Anchor pattern: \\ue202turn{N}search{index}
+- N = the tool call number (0 for the first call, 1 for the second, etc.)
+- index = the 0-based position of the source in that call's results (acts listed first, then cases, in the order they appear)
+
+**Examples (copy these exactly):**
+- First tool call, source 0: "The court held that...\\ue202turn0search0"
+- First tool call, multiple: "This principle...\\ue202turn0search1\\ue202turn0search3"
+- Second tool call, source 2: "The statute provides...\\ue202turn1search2"
+- Group: "The defendant argued... \\ue200\\ue202turn0search0\\ue202turn0search2\\ue201"
+- Highlighted quote: "\\ue203The right to fair hearing is fundamental.\\ue204\\ue202turn0search1"
+
+**CRITICAL:** Output escape sequences EXACTLY as shown. Do NOT substitute with brackets, numbers, or markdown links. Place anchors AFTER punctuation. Cite every source you reference. Track which tool call returned each source to use the correct turn number.`.trim();
+}
+
 /** Builds the web search tool context with citation format instructions. */
 export function buildWebSearchContext(): string {
   return `# \`${Tools.web_search}\`:

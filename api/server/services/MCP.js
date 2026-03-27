@@ -17,6 +17,7 @@ const {
 } = require('@librechat/api');
 const {
   Time,
+  Tools,
   CacheKeys,
   Constants,
   ContentTypes,
@@ -610,6 +611,13 @@ function createToolInstance({
       logger.info(
         `[MCP][${serverName}][${toolName}][User: ${userId}] Tool call succeeded, result type: ${typeof result}, isArray: ${Array.isArray(result)}`,
       );
+
+      // Stamp the agent graph's turn number onto citation artifacts so that
+      // multiple tool calls in the same response get distinct turn indices.
+      if (Array.isArray(result) && result[1]?.[Tools.web_search]) {
+        const turn = config?.toolCall?.turn ?? 0;
+        result[1][Tools.web_search].turn = turn;
+      }
 
       if (isAssistantsEndpoint(provider) && Array.isArray(result)) {
         return result[0];
