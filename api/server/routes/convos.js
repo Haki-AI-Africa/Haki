@@ -40,10 +40,13 @@ router.get('/', async (req, res) => {
     tags = Array.isArray(req.query.tags) ? req.query.tags : [req.query.tags];
   }
 
+  const HAKI_LEGAL_AGENT_ID = 'agent_Dz9DK5ALMkuAMwvdEbqAN';
   let filter = {};
   if (process.env.CONFIG_PATH && process.env.CONFIG_PATH.endsWith('haki-legal.yaml')) {
-    filter.agent_id = 'agent_Dz9DK5ALMkuAMwvdEbqAN';
+    filter.agent_id = HAKI_LEGAL_AGENT_ID;
     filter.endpoint = 'agents';
+  } else {
+    filter.excludeAgentId = HAKI_LEGAL_AGENT_ID;
   }
 
   try {

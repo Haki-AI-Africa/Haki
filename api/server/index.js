@@ -67,6 +67,13 @@ const startServer = async () => {
   const indexPath = path.join(appConfig.paths.dist, 'index.html');
   let indexHTML = fs.readFileSync(indexPath, 'utf8');
 
+  const appTitle =
+    process.env.APP_TITLE ||
+    (process.env.CONFIG_PATH && process.env.CONFIG_PATH.includes('legal')
+      ? 'Haki Legal'
+      : 'Haki One');
+  indexHTML = indexHTML.replace(/<title>[^<]*<\/title>/, `<title>${appTitle}</title>`);
+
   // In order to provide support to serving the application in a sub-directory
   // We need to update the base href if the DOMAIN_CLIENT is specified and not the root path
   if (process.env.DOMAIN_CLIENT) {

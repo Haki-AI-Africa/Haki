@@ -173,6 +173,7 @@ module.exports = {
       model,
       endpoint,
       agent_id,
+      excludeAgentId,
     } = {},
   ) => {
     const filters = [{ user }];
@@ -194,6 +195,9 @@ module.exports = {
     }
     if (agent_id) {
       filters.push({ agent_id });
+    }
+    if (excludeAgentId) {
+      filters.push({ $or: [{ agent_id: { $ne: excludeAgentId } }, { agent_id: { $exists: false } }] });
     }
 
     filters.push({ $or: [{ expiredAt: null }, { expiredAt: { $exists: false } }] });

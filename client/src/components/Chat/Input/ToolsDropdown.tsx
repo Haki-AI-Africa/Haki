@@ -15,7 +15,7 @@ import ArtifactsSubMenu from '~/components/Chat/Input/ArtifactsSubMenu';
 import MCPSubMenu from '~/components/Chat/Input/MCPSubMenu';
 import { useGetStartupConfig } from '~/data-provider';
 import { useBadgeRowContext } from '~/Providers';
-import { cn } from '~/utils';
+import { cn, hideExtraParams } from '~/utils';
 
 interface ToolsDropdownProps {
   disabled?: boolean;
@@ -256,7 +256,7 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
     });
   }
 
-  if (artifactsEnabled) {
+  if (!hideExtraParams && artifactsEnabled) {
     dropdownItems.push({
       hideOnClick: false,
       render: (props) => (
