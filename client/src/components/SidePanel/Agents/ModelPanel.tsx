@@ -18,7 +18,7 @@ import { useGetEndpointsQuery } from '~/data-provider';
 import { useLiveAnnouncer } from '~/Providers';
 import { useLocalize } from '~/hooks';
 import { Panel } from '~/common';
-import { cn } from '~/utils';
+import { cn, hideExtraParams, HIDDEN_PARAM_KEYS } from '~/utils';
 
 export default function ModelPanel({
   providers,
@@ -223,6 +223,9 @@ export default function ModelPanel({
             {/* This is the parent element containing all settings */}
             {/* Below is an example of an applied dynamic setting, each be contained by a div with the column span specified */}
             {parameters.map((setting) => {
+              if (hideExtraParams && HIDDEN_PARAM_KEYS.has(setting.key)) {
+                return null;
+              }
               const Component = componentMapping[setting.component];
               if (!Component) {
                 return null;

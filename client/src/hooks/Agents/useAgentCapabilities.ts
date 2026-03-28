@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { AgentCapabilities } from 'librechat-data-provider';
+import { hideExtraParams } from '~/utils';
 
 interface AgentCapabilitiesResult {
   toolsEnabled: boolean;
@@ -53,7 +54,7 @@ export default function useAgentCapabilities(
   );
 
   const codeEnabled = useMemo(
-    () => capabilities?.includes(AgentCapabilities.execute_code) ?? false,
+    () => !hideExtraParams && (capabilities?.includes(AgentCapabilities.execute_code) ?? false),
     [capabilities],
   );
 
