@@ -15,7 +15,7 @@ import { useSetIndexOptions, useLocalize } from '~/hooks';
 import { useGetEndpointsQuery } from '~/data-provider';
 import { componentMapping } from './components';
 import { useChatContext } from '~/Providers';
-import { logger } from '~/utils';
+import { logger, hideExtraParams, HIDDEN_PARAM_KEYS } from '~/utils';
 
 export default function Parameters() {
   const localize = useLocalize();
@@ -148,6 +148,9 @@ export default function Parameters() {
         {/* This is the parent element containing all settings */}
         {/* Below is an example of an applied dynamic setting, each be contained by a div with the column span specified */}
         {parameters.map((setting) => {
+          if (hideExtraParams && HIDDEN_PARAM_KEYS.has(setting.key)) {
+            return null;
+          }
           const Component = componentMapping[setting.component];
           if (!Component) {
             return null;

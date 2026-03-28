@@ -29,7 +29,7 @@ function AgentSelect({
   const permissionLevel = useAgentDefaultPermissionLevel();
 
   const { data: agents = null } = useListAgentsQuery(
-    { requiredPermission: permissionLevel },
+    { requiredPermission: permissionLevel, excludeGlobal: 1 },
     {
       select: (res) =>
         res.data.map((agent) =>

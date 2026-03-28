@@ -1,5 +1,6 @@
 import TextareaAutosize from 'react-textarea-autosize';
 import { EModelEndpoint, endpointSettings } from 'librechat-data-provider';
+import { hideExtraParams } from '~/utils';
 import {
   Input,
   Label,
@@ -100,215 +101,217 @@ export default function Settings({ conversation, setOption, models, readonly }: 
           />
         </div>
       </div>
-      <div className="col-span-5 flex flex-col items-center justify-start gap-6 px-3 sm:col-span-2">
-        <HoverCard openDelay={300}>
-          <HoverCardTrigger className="grid w-full items-center gap-2">
-            <div className="mt-1 flex w-full justify-between">
-              <Label htmlFor="max-context-tokens" className="text-left text-sm font-medium">
-                {localize('com_endpoint_context_tokens')}{' '}
-              </Label>
-              <InputNumber
-                id="max-context-tokens"
-                stringMode={false}
+      {!hideExtraParams && (
+        <div className="col-span-5 flex flex-col items-center justify-start gap-6 px-3 sm:col-span-2">
+          <HoverCard openDelay={300}>
+            <HoverCardTrigger className="grid w-full items-center gap-2">
+              <div className="mt-1 flex w-full justify-between">
+                <Label htmlFor="max-context-tokens" className="text-left text-sm font-medium">
+                  {localize('com_endpoint_context_tokens')}{' '}
+                </Label>
+                <InputNumber
+                  id="max-context-tokens"
+                  stringMode={false}
+                  disabled={readonly}
+                  value={maxContextTokensValue as number}
+                  onChange={setMaxContextTokens as OnInputNumberChange}
+                  placeholder={localize('com_nav_theme_system')}
+                  min={10}
+                  max={2000000}
+                  step={1000}
+                  controls={false}
+                  className={cn(
+                    defaultTextProps,
+                    cn(
+                      optionText,
+                      'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
+                      'w-1/3',
+                    ),
+                  )}
+                />
+              </div>
+            </HoverCardTrigger>
+            <OptionHoverAlt
+              description="com_endpoint_context_info"
+              langCode={true}
+              side={ESide.Left}
+            />
+          </HoverCard>
+          <HoverCard openDelay={300}>
+            <HoverCardTrigger className="grid w-full items-center gap-2">
+              <div className="flex justify-between">
+                <Label htmlFor="temp-int" className="text-left text-sm font-medium">
+                  {localize('com_endpoint_temperature')}{' '}
+                  <small className="opacity-40">
+                    ({localize('com_endpoint_default')}: {google.temperature.default})
+                  </small>
+                </Label>
+                <InputNumber
+                  id="temp-int"
+                  disabled={readonly}
+                  value={temperature}
+                  onChange={(value) => setTemperature(value ?? google.temperature.default)}
+                  max={google.temperature.max}
+                  min={google.temperature.min}
+                  step={google.temperature.step}
+                  controls={false}
+                  className={cn(
+                    defaultTextProps,
+                    cn(
+                      optionText,
+                      'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
+                    ),
+                  )}
+                />
+              </div>
+              <Slider
                 disabled={readonly}
-                value={maxContextTokensValue as number}
-                onChange={setMaxContextTokens as OnInputNumberChange}
-                placeholder={localize('com_nav_theme_system')}
-                min={10}
-                max={2000000}
-                step={1000}
-                controls={false}
-                className={cn(
-                  defaultTextProps,
-                  cn(
-                    optionText,
-                    'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
-                    'w-1/3',
-                  ),
-                )}
-              />
-            </div>
-          </HoverCardTrigger>
-          <OptionHoverAlt
-            description="com_endpoint_context_info"
-            langCode={true}
-            side={ESide.Left}
-          />
-        </HoverCard>
-        <HoverCard openDelay={300}>
-          <HoverCardTrigger className="grid w-full items-center gap-2">
-            <div className="flex justify-between">
-              <Label htmlFor="temp-int" className="text-left text-sm font-medium">
-                {localize('com_endpoint_temperature')}{' '}
-                <small className="opacity-40">
-                  ({localize('com_endpoint_default')}: {google.temperature.default})
-                </small>
-              </Label>
-              <InputNumber
-                id="temp-int"
-                disabled={readonly}
-                value={temperature}
-                onChange={(value) => setTemperature(value ?? google.temperature.default)}
+                value={[temperature ?? google.temperature.default]}
+                onValueChange={(value) => setTemperature(value[0])}
+                onDoubleClick={() => setTemperature(google.temperature.default)}
                 max={google.temperature.max}
                 min={google.temperature.min}
                 step={google.temperature.step}
-                controls={false}
-                className={cn(
-                  defaultTextProps,
-                  cn(
-                    optionText,
-                    'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
-                  ),
-                )}
+                className="flex h-4 w-full"
+                aria-labelledby="temp-int"
               />
-            </div>
-            <Slider
-              disabled={readonly}
-              value={[temperature ?? google.temperature.default]}
-              onValueChange={(value) => setTemperature(value[0])}
-              onDoubleClick={() => setTemperature(google.temperature.default)}
-              max={google.temperature.max}
-              min={google.temperature.min}
-              step={google.temperature.step}
-              className="flex h-4 w-full"
-              aria-labelledby="temp-int"
-            />
-          </HoverCardTrigger>
-          <OptionHover endpoint={conversation.endpoint ?? ''} type="temp" side={ESide.Left} />
-        </HoverCard>
-        <HoverCard openDelay={300}>
-          <HoverCardTrigger className="grid w-full items-center gap-2">
-            <div className="flex justify-between">
-              <Label htmlFor="top-p-int" className="text-left text-sm font-medium">
-                {localize('com_endpoint_top_p')}{' '}
-                <small className="opacity-40">
-                  ({localize('com_endpoint_default_with_num', { 0: google.topP.default + '' })})
-                </small>
-              </Label>
-              <InputNumber
-                id="top-p-int"
+            </HoverCardTrigger>
+            <OptionHover endpoint={conversation.endpoint ?? ''} type="temp" side={ESide.Left} />
+          </HoverCard>
+          <HoverCard openDelay={300}>
+            <HoverCardTrigger className="grid w-full items-center gap-2">
+              <div className="flex justify-between">
+                <Label htmlFor="top-p-int" className="text-left text-sm font-medium">
+                  {localize('com_endpoint_top_p')}{' '}
+                  <small className="opacity-40">
+                    ({localize('com_endpoint_default_with_num', { 0: google.topP.default + '' })})
+                  </small>
+                </Label>
+                <InputNumber
+                  id="top-p-int"
+                  disabled={readonly}
+                  value={topP}
+                  onChange={(value) => setTopP(value ?? google.topP.default)}
+                  max={google.topP.max}
+                  min={google.topP.min}
+                  step={google.topP.step}
+                  controls={false}
+                  className={cn(
+                    defaultTextProps,
+                    cn(
+                      optionText,
+                      'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
+                    ),
+                  )}
+                />
+              </div>
+              <Slider
                 disabled={readonly}
-                value={topP}
-                onChange={(value) => setTopP(value ?? google.topP.default)}
+                value={[topP ?? google.topP.default]}
+                onValueChange={(value) => setTopP(value[0])}
+                onDoubleClick={() => setTopP(google.topP.default)}
                 max={google.topP.max}
                 min={google.topP.min}
                 step={google.topP.step}
-                controls={false}
-                className={cn(
-                  defaultTextProps,
-                  cn(
-                    optionText,
-                    'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
-                  ),
-                )}
+                className="flex h-4 w-full"
+                aria-labelledby="top-p-int"
               />
-            </div>
-            <Slider
-              disabled={readonly}
-              value={[topP ?? google.topP.default]}
-              onValueChange={(value) => setTopP(value[0])}
-              onDoubleClick={() => setTopP(google.topP.default)}
-              max={google.topP.max}
-              min={google.topP.min}
-              step={google.topP.step}
-              className="flex h-4 w-full"
-              aria-labelledby="top-p-int"
-            />
-          </HoverCardTrigger>
-          <OptionHover endpoint={conversation.endpoint ?? ''} type="topp" side={ESide.Left} />
-        </HoverCard>
+            </HoverCardTrigger>
+            <OptionHover endpoint={conversation.endpoint ?? ''} type="topp" side={ESide.Left} />
+          </HoverCard>
 
-        <HoverCard openDelay={300}>
-          <HoverCardTrigger className="grid w-full items-center gap-2">
-            <div className="flex justify-between">
-              <Label htmlFor="top-k-int" className="text-left text-sm font-medium">
-                {localize('com_endpoint_top_k')}{' '}
-                <small className="opacity-40">
-                  ({localize('com_endpoint_default_with_num', { 0: google.topK.default + '' })})
-                </small>
-              </Label>
-              <InputNumber
-                id="top-k-int"
+          <HoverCard openDelay={300}>
+            <HoverCardTrigger className="grid w-full items-center gap-2">
+              <div className="flex justify-between">
+                <Label htmlFor="top-k-int" className="text-left text-sm font-medium">
+                  {localize('com_endpoint_top_k')}{' '}
+                  <small className="opacity-40">
+                    ({localize('com_endpoint_default_with_num', { 0: google.topK.default + '' })})
+                  </small>
+                </Label>
+                <InputNumber
+                  id="top-k-int"
+                  disabled={readonly}
+                  value={topK}
+                  onChange={(value) => setTopK(value ?? google.topK.default)}
+                  max={google.topK.max}
+                  min={google.topK.min}
+                  step={google.topK.step}
+                  controls={false}
+                  className={cn(
+                    defaultTextProps,
+                    cn(
+                      optionText,
+                      'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
+                    ),
+                  )}
+                />
+              </div>
+              <Slider
                 disabled={readonly}
-                value={topK}
-                onChange={(value) => setTopK(value ?? google.topK.default)}
+                value={[topK ?? google.topK.default]}
+                onValueChange={(value) => setTopK(value[0])}
+                onDoubleClick={() => setTopK(google.topK.default)}
                 max={google.topK.max}
                 min={google.topK.min}
                 step={google.topK.step}
-                controls={false}
-                className={cn(
-                  defaultTextProps,
-                  cn(
-                    optionText,
-                    'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
-                  ),
-                )}
+                className="flex h-4 w-full"
+                aria-labelledby="top-k-int"
               />
-            </div>
-            <Slider
-              disabled={readonly}
-              value={[topK ?? google.topK.default]}
-              onValueChange={(value) => setTopK(value[0])}
-              onDoubleClick={() => setTopK(google.topK.default)}
-              max={google.topK.max}
-              min={google.topK.min}
-              step={google.topK.step}
-              className="flex h-4 w-full"
-              aria-labelledby="top-k-int"
-            />
-          </HoverCardTrigger>
-          <OptionHover endpoint={conversation.endpoint ?? ''} type="topk" side={ESide.Left} />
-        </HoverCard>
-        <HoverCard openDelay={300}>
-          <HoverCardTrigger className="grid w-full items-center gap-2">
-            <div className="flex justify-between">
-              <Label htmlFor="max-tokens-int" className="text-left text-sm font-medium">
-                {localize('com_endpoint_max_output_tokens')}{' '}
-                <small className="opacity-40">
-                  (
-                  {localize('com_endpoint_default_with_num', {
-                    0: google.maxOutputTokens.default + '',
-                  })}
-                  )
-                </small>
-              </Label>
-              <InputNumber
-                id="max-tokens-int"
+            </HoverCardTrigger>
+            <OptionHover endpoint={conversation.endpoint ?? ''} type="topk" side={ESide.Left} />
+          </HoverCard>
+          <HoverCard openDelay={300}>
+            <HoverCardTrigger className="grid w-full items-center gap-2">
+              <div className="flex justify-between">
+                <Label htmlFor="max-tokens-int" className="text-left text-sm font-medium">
+                  {localize('com_endpoint_max_output_tokens')}{' '}
+                  <small className="opacity-40">
+                    (
+                    {localize('com_endpoint_default_with_num', {
+                      0: google.maxOutputTokens.default + '',
+                    })}
+                    )
+                  </small>
+                </Label>
+                <InputNumber
+                  id="max-tokens-int"
+                  disabled={readonly}
+                  value={maxOutputTokens}
+                  onChange={(value) => setMaxOutputTokens(Number(value))}
+                  max={google.maxOutputTokens.max}
+                  min={google.maxOutputTokens.min}
+                  step={google.maxOutputTokens.step}
+                  controls={false}
+                  className={cn(
+                    defaultTextProps,
+                    cn(
+                      optionText,
+                      'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
+                    ),
+                  )}
+                />
+              </div>
+              <Slider
                 disabled={readonly}
-                value={maxOutputTokens}
-                onChange={(value) => setMaxOutputTokens(Number(value))}
+                value={[maxOutputTokens ?? google.maxOutputTokens.default]}
+                onValueChange={(value) => setMaxOutputTokens(value[0])}
+                onDoubleClick={() => setMaxOutputTokens(google.maxOutputTokens.default)}
                 max={google.maxOutputTokens.max}
                 min={google.maxOutputTokens.min}
                 step={google.maxOutputTokens.step}
-                controls={false}
-                className={cn(
-                  defaultTextProps,
-                  cn(
-                    optionText,
-                    'reset-rc-number-input reset-rc-number-input-text-right h-auto w-12 border-0 group-hover/temp:border-gray-200',
-                  ),
-                )}
+                className="flex h-4 w-full"
+                aria-labelledby="max-tokens-int"
               />
-            </div>
-            <Slider
-              disabled={readonly}
-              value={[maxOutputTokens ?? google.maxOutputTokens.default]}
-              onValueChange={(value) => setMaxOutputTokens(value[0])}
-              onDoubleClick={() => setMaxOutputTokens(google.maxOutputTokens.default)}
-              max={google.maxOutputTokens.max}
-              min={google.maxOutputTokens.min}
-              step={google.maxOutputTokens.step}
-              className="flex h-4 w-full"
-              aria-labelledby="max-tokens-int"
+            </HoverCardTrigger>
+            <OptionHover
+              endpoint={conversation.endpoint ?? ''}
+              type="maxoutputtokens"
+              side={ESide.Left}
             />
-          </HoverCardTrigger>
-          <OptionHover
-            endpoint={conversation.endpoint ?? ''}
-            type="maxoutputtokens"
-            side={ESide.Left}
-          />
-        </HoverCard>
-      </div>
+          </HoverCard>
+        </div>
+      )}
     </div>
   );
 }

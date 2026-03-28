@@ -200,7 +200,10 @@ export const roleDefaults = defaultRolesSchema.parse({
       },
       [PermissionTypes.FILE_SEARCH]: {},
       [PermissionTypes.FILE_CITATIONS]: {},
-      [PermissionTypes.MCP_SERVERS]: {},
+      [PermissionTypes.MCP_SERVERS]: {
+        [Permissions.USE]: false,
+        [Permissions.CREATE]: false,
+      },
       [PermissionTypes.REMOTE_AGENTS]: {},
     },
   },

@@ -20,26 +20,12 @@ export default function Artifacts() {
   const artifactsMode = watch(AgentCapabilities.artifacts);
 
   const handleArtifactsChange = (value: boolean) => {
-    setValue(AgentCapabilities.artifacts, value ? ArtifactModes.DEFAULT : '', {
-      shouldDirty: true,
-    });
-  };
-
-  const handleShadcnuiChange = (value: boolean) => {
-    setValue(AgentCapabilities.artifacts, value ? ArtifactModes.SHADCNUI : ArtifactModes.DEFAULT, {
-      shouldDirty: true,
-    });
-  };
-
-  const handleCustomModeChange = (value: boolean) => {
-    setValue(AgentCapabilities.artifacts, value ? ArtifactModes.CUSTOM : ArtifactModes.DEFAULT, {
+    setValue(AgentCapabilities.artifacts, value ? ArtifactModes.SHADCNUI : '', {
       shouldDirty: true,
     });
   };
 
   const isEnabled = artifactsMode !== undefined && artifactsMode !== '';
-  const isCustomEnabled = artifactsMode === ArtifactModes.CUSTOM;
-  const isShadcnEnabled = artifactsMode === ArtifactModes.SHADCNUI;
 
   return (
     <div className="w-full">
@@ -57,22 +43,6 @@ export default function Artifacts() {
           checked={isEnabled}
           onCheckedChange={handleArtifactsChange}
           hoverCardText={localize('com_nav_info_code_artifacts_agent')}
-        />
-        <SwitchItem
-          id="includeShadcnui"
-          label={localize('com_ui_include_shadcnui')}
-          checked={isShadcnEnabled}
-          onCheckedChange={handleShadcnuiChange}
-          hoverCardText={localize('com_nav_info_include_shadcnui')}
-          disabled={!isEnabled || isCustomEnabled}
-        />
-        <SwitchItem
-          id="customPromptMode"
-          label={localize('com_ui_custom_prompt_mode')}
-          checked={isCustomEnabled}
-          onCheckedChange={handleCustomModeChange}
-          hoverCardText={localize('com_nav_info_custom_prompt_mode')}
-          disabled={!isEnabled}
         />
       </div>
     </div>

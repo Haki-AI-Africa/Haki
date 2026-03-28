@@ -4,6 +4,7 @@ import type { SettingDefinition } from 'librechat-data-provider';
 import type { TModelSelectProps } from '~/common';
 import { componentMapping } from '~/components/SidePanel/Parameters/components';
 import { presetSettings } from 'librechat-data-provider';
+import { hideExtraParams, HIDDEN_PARAM_KEYS } from '~/utils';
 
 export default function BedrockSettings({
   conversation,
@@ -25,6 +26,9 @@ export default function BedrockSettings({
 
   const renderComponent = (setting: SettingDefinition | undefined) => {
     if (!setting) {
+      return null;
+    }
+    if (hideExtraParams && HIDDEN_PARAM_KEYS.has(setting.key)) {
       return null;
     }
     const Component = componentMapping[setting.component];

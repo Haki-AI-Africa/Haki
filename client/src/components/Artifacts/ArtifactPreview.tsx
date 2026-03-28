@@ -6,7 +6,7 @@ import type {
 } from '@codesandbox/sandpack-react/unstyled';
 import type { TStartupConfig } from 'librechat-data-provider';
 import type { ArtifactFiles } from '~/common';
-import { sharedFiles, sharedOptions } from '~/utils/artifacts';
+import { sharedFiles, sharedOptions, getIndexHtml } from '~/utils/artifacts';
 
 export const ArtifactPreview = memo(function ({
   files,
@@ -16,6 +16,7 @@ export const ArtifactPreview = memo(function ({
   previewRef,
   currentCode,
   startupConfig,
+  isDarkMode = false,
 }: {
   files: ArtifactFiles;
   fileKey: string;
@@ -24,6 +25,7 @@ export const ArtifactPreview = memo(function ({
   previewRef: MutableRefObject<SandpackPreviewRef>;
   currentCode?: string;
   startupConfig?: TStartupConfig;
+  isDarkMode?: boolean;
 }) {
   const artifactFiles = useMemo(() => {
     if (Object.keys(files).length === 0) {
@@ -55,7 +57,7 @@ export const ArtifactPreview = memo(function ({
 
   return (
     <SandpackProvider
-      files={{ ...artifactFiles, ...sharedFiles }}
+      files={{ ...sharedFiles, ...artifactFiles, '/public/index.html': getIndexHtml(isDarkMode) }}
       options={options}
       {...sharedProps}
       template={template}

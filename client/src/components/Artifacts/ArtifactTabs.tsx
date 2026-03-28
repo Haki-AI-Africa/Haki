@@ -30,7 +30,7 @@ export default function ArtifactTabs({
     lastIdRef.current = artifact.id;
   }, [setCurrentCode, artifact.id]);
 
-  const { files, fileKey, template, sharedProps } = useArtifactProps({ artifact });
+  const { files, fileKey, template, sharedProps, isDarkMode } = useArtifactProps({ artifact });
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -56,6 +56,7 @@ export default function ArtifactTabs({
           sharedProps={sharedProps}
           currentCode={currentCode}
           startupConfig={startupConfig}
+          isDarkMode={isDarkMode}
         />
       </Tabs.Content>
     </div>

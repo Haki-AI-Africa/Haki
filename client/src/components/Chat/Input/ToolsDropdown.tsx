@@ -106,27 +106,9 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
   const handleArtifactsToggle = useCallback(() => {
     const currentState = artifacts.toggleState;
     if (!currentState || currentState === '') {
-      artifacts.debouncedChange({ value: ArtifactModes.DEFAULT });
+      artifacts.debouncedChange({ value: ArtifactModes.SHADCNUI });
     } else {
       artifacts.debouncedChange({ value: '' });
-    }
-  }, [artifacts]);
-
-  const handleShadcnToggle = useCallback(() => {
-    const currentState = artifacts.toggleState;
-    if (currentState === ArtifactModes.SHADCNUI) {
-      artifacts.debouncedChange({ value: ArtifactModes.DEFAULT });
-    } else {
-      artifacts.debouncedChange({ value: ArtifactModes.SHADCNUI });
-    }
-  }, [artifacts]);
-
-  const handleCustomToggle = useCallback(() => {
-    const currentState = artifacts.toggleState;
-    if (currentState === ArtifactModes.CUSTOM) {
-      artifacts.debouncedChange({ value: ArtifactModes.DEFAULT });
-    } else {
-      artifacts.debouncedChange({ value: ArtifactModes.CUSTOM });
     }
   }, [artifacts]);
 
@@ -284,8 +266,6 @@ const ToolsDropdown = ({ disabled }: ToolsDropdownProps) => {
           setIsArtifactsPinned={setIsArtifactsPinned}
           artifactsMode={artifacts.toggleState as string}
           handleArtifactsToggle={handleArtifactsToggle}
-          handleShadcnToggle={handleShadcnToggle}
-          handleCustomToggle={handleCustomToggle}
         />
       ),
     });

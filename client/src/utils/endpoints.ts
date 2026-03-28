@@ -226,7 +226,7 @@ export function applyModelSpecEphemeralAgent({
     web_search: modelSpec.webSearch ?? false,
     file_search: modelSpec.fileSearch ?? false,
     execute_code: modelSpec.executeCode ?? false,
-    artifacts: modelSpec.artifacts === true ? 'default' : modelSpec.artifacts || '',
+    artifacts: modelSpec.artifacts === true ? 'shadcnui' : modelSpec.artifacts || 'shadcnui',
   };
 
   // For existing conversations, layer per-conversation localStorage overrides

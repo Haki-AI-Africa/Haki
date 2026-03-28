@@ -235,7 +235,13 @@ const getResourcePermissionsMap = async ({ userId, role, resourceType, resourceI
  * @param {number} params.requiredPermissions - The minimum permission bits required (e.g., 1 for VIEW, 3 for VIEW+EDIT)
  * @returns {Promise<Array>} Array of resource IDs
  */
-const findAccessibleResources = async ({ userId, role, resourceType, requiredPermissions }) => {
+const findAccessibleResources = async ({
+  userId,
+  role,
+  resourceType,
+  requiredPermissions,
+  excludePublic = false,
+}) => {
   try {
     if (typeof requiredPermissions !== 'number' || requiredPermissions < 1) {
       throw new Error('requiredPermissions must be a positive number');
@@ -244,7 +250,14 @@ const findAccessibleResources = async ({ userId, role, resourceType, requiredPer
     validateResourceType(resourceType);
 
     // Get all principals for the user (user + groups + public)
-    const principalsList = await getUserPrincipals({ userId, role });
+    let principalsList = await getUserPrincipals({ userId, role });
+
+    // Optionally exclude the PUBLIC principal so only directly-shared resources are returned
+    if (excludePublic) {
+      principalsList = principalsList.filter(
+        (p) => p.principalType !== PrincipalType.PUBLIC,
+      );
+    }
 
     if (principalsList.length === 0) {
       return [];

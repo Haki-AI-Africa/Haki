@@ -13,7 +13,7 @@ export default function AgentListView({
   const localize = useLocalize();
   const permissionLevel = useAgentDefaultPermissionLevel();
   const { data: agentsData, isLoading } = useListAgentsQuery(
-    { requiredPermission: permissionLevel },
+    { requiredPermission: permissionLevel, excludeGlobal: 1 },
     {
       select: (res) => res.data,
     },
@@ -75,7 +75,7 @@ export default function AgentListView({
           ))}
           {agents.length === 0 && (
             <p className="py-8 text-center text-sm text-text-secondary">
-              {localize('com_agents_no_access')}
+              {localize('com_agents_no_agents_yet')}
             </p>
           )}
         </div>

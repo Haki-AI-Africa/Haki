@@ -145,8 +145,34 @@ export function getProps(type: string): Partial<SandpackProviderProps> {
 }
 
 export const sharedOptions: SandpackProviderProps['options'] = {
-  externalResources: ['https://cdn.tailwindcss.com/3.4.17'],
+  externalResources: [
+    'https://cdn.tailwindcss.com/3.4.17',
+    'https://cdn.jsdelivr.net/npm/@fontsource-variable/inter/index.min.css',
+  ],
 };
+
+export function getIndexHtml(isDarkMode: boolean): string {
+  return dedent`
+    <!DOCTYPE html>
+    <html lang="en"${isDarkMode ? ' class="dark"' : ''}>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Document</title>
+        <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+        <script>tailwind.config = { darkMode: 'class' }</script>
+        <link href="https://cdn.jsdelivr.net/npm/@fontsource-variable/inter/index.min.css" rel="stylesheet">
+        <style>
+          body { font-family: 'Inter Variable', 'Inter', sans-serif; }
+          html.dark body { background-color: #212121; color: #e5e5e5; }
+        </style>
+      </head>
+      <body>
+        <div id="root"></div>
+      </body>
+    </html>
+  `;
+}
 
 export const sharedFiles = {
   '/lib/utils.ts': shadcnComponents.utils,
@@ -187,18 +213,5 @@ export const sharedFiles = {
   '/components/ui/toggle.tsx': shadcnComponents.toggle,
   '/components/ui/tooltip.tsx': shadcnComponents.tooltip,
   '/components/ui/use-toast.tsx': shadcnComponents.useToast,
-  '/public/index.html': dedent`
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Document</title>
-        <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-      </head>
-      <body>
-        <div id="root"></div>
-      </body>
-    </html>
-  `,
+  '/public/index.html': getIndexHtml(false),
 };

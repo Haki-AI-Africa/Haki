@@ -651,7 +651,7 @@ const deleteAgentHandler = async (req, res) => {
 const getListAgentsHandler = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { category, search, limit, cursor, promoted } = req.query;
+    const { category, search, limit, cursor, promoted, excludeGlobal } = req.query;
     let requiredPermission = req.query.requiredPermission;
     if (typeof requiredPermission === 'string') {
       requiredPermission = parseInt(requiredPermission, 10);
@@ -683,12 +683,15 @@ const getListAgentsHandler = async (req, res) => {
       filter.$or = [{ name: regex }, { description: regex }];
     }
 
-    // Get agent IDs the user has VIEW access to via ACL
+    // Get agent IDs the user has access to via ACL
+    // When excludeGlobal is set, exclude the PUBLIC principal so only
+    // agents directly shared with the user (or their team/role) are returned
     const accessibleIds = await findAccessibleResources({
       userId,
       role: req.user.role,
       resourceType: ResourceType.AGENT,
       requiredPermissions: requiredPermission,
+      excludePublic: excludeGlobal === '1',
     });
 
     const publiclyAccessibleIds = await findPubliclyAccessibleResources({

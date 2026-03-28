@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useRef } from 'react';
 import { useSetRecoilState } from 'recoil';
-import { Tools, Constants, LocalStorageKeys, AgentCapabilities } from 'librechat-data-provider';
+import { Tools, Constants, LocalStorageKeys, AgentCapabilities, ArtifactModes } from 'librechat-data-provider';
 import type { TAgentsEndpoint } from 'librechat-data-provider';
 import {
   useMCPServerManager,
@@ -142,6 +142,8 @@ export default function BadgeRowProvider({
         } catch (e) {
           console.error('Failed to parse artifacts toggle value:', e);
         }
+      } else {
+        initialValues[AgentCapabilities.artifacts] = ArtifactModes.SHADCNUI;
       }
 
       const hasOverrides = Object.keys(initialValues).length > 0;

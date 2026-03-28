@@ -2926,3 +2926,37 @@ html {
 .sharepoint-picker-bg {
   background-color: #f5f5f5;
 }
+
+/* ── Sandpack Canvas preview ───────────────────────────────────────── */
+
+/* Make the preview container a positioning root */
+.sp-preview-container {
+  position: relative;
+}
+
+/* Progress status pill (e.g. "Starting…", "[1/3] Downloading manifest") */
+.sp-preview-container > div[class=""] {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  pointer-events: none;
+}
+
+.sp-preview-container > div[class=""] > p {
+  margin: 0;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-family: 'Inter Variable', 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(30, 30, 30, 0.65);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}

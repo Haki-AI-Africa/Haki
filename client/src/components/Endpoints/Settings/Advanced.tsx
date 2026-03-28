@@ -11,7 +11,7 @@ import {
 } from '@librechat/client';
 import type { ValueType } from '@rc-component/mini-decimal';
 import type { TModelSelectProps } from '~/common';
-import { cn, defaultTextProps, optionText, removeFocusOutlines } from '~/utils';
+import { cn, defaultTextProps, optionText, removeFocusOutlines, hideExtraParams } from '~/utils';
 import { useLocalize, useDebouncedInput } from '~/hooks';
 import OptionHover from './OptionHover';
 import { ESide } from '~/common';
@@ -115,7 +115,7 @@ export default function Settings({
         </div>
       </div>
       <div className="col-span-5 flex flex-col items-center justify-start gap-6 px-3 sm:col-span-2">
-        <HoverCard openDelay={300}>
+        {!hideExtraParams && <HoverCard openDelay={300}>
           <HoverCardTrigger className="grid w-full items-center gap-2">
             <div className="flex justify-between">
               <Label htmlFor="temp-int" className="text-left text-sm font-medium">
@@ -155,8 +155,8 @@ export default function Settings({
             />
           </HoverCardTrigger>
           <OptionHover endpoint={optionEndpoint ?? ''} type="temp" side={ESide.Left} />
-        </HoverCard>
-        <HoverCard openDelay={300}>
+        </HoverCard>}
+        {!hideExtraParams && <HoverCard openDelay={300}>
           <HoverCardTrigger className="grid w-full items-center gap-2">
             <div className="flex justify-between">
               <Label htmlFor="top-p-int" className="text-left text-sm font-medium">
@@ -196,7 +196,7 @@ export default function Settings({
             />
           </HoverCardTrigger>
           <OptionHover endpoint={optionEndpoint ?? ''} type="topp" side={ESide.Left} />
-        </HoverCard>
+        </HoverCard>}
 
         <HoverCard openDelay={300}>
           <HoverCardTrigger className="grid w-full items-center gap-2">

@@ -19,7 +19,7 @@ export default function useArtifactProps({ artifact }: { artifact: Artifact }) {
     }
 
     if (type === 'text/markdown' || type === 'text/md' || type === 'text/plain') {
-      return ['content.md', getMarkdownFiles(artifact.content ?? '')];
+      return ['content.md', getMarkdownFiles(artifact.content ?? '', isDarkMode)];
     }
 
     const fileKey = getArtifactFilename(artifact.type ?? '', artifact.language);
@@ -41,5 +41,6 @@ export default function useArtifactProps({ artifact }: { artifact: Artifact }) {
     fileKey,
     template,
     sharedProps,
+    isDarkMode,
   };
 }

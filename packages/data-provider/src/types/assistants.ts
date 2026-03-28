@@ -336,6 +336,7 @@ export type AgentListParams = {
   search?: string;
   cursor?: string;
   promoted?: 0 | 1;
+  excludeGlobal?: 0 | 1;
 };
 
 export type AgentListResponse = {

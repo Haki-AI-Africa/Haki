@@ -239,51 +239,49 @@ const markdownCSS = `
   box-sizing: content-box;
 }
 
-/* Dark theme */
-@media (prefers-color-scheme: dark) {
-  .markdown-body {
-    color: #c9d1d9;
-    background-color: #0d1117;
-  }
+/* Dark theme — triggered by html.dark (set from app theme) */
+html.dark .markdown-body {
+  color: #c9d1d9;
+  background-color: #212121;
+}
 
-  .markdown-body h1, .markdown-body h2 {
-    border-bottom-color: #21262d;
-  }
+html.dark .markdown-body h1, html.dark .markdown-body h2 {
+  border-bottom-color: #21262d;
+}
 
-  .markdown-body code {
-    background-color: rgba(110, 118, 129, 0.4);
-    color: #c9d1d9;
-  }
+html.dark .markdown-body code {
+  background-color: rgba(110, 118, 129, 0.4);
+  color: #c9d1d9;
+}
 
-  .markdown-body pre {
-    background-color: #161b22;
-    color: #c9d1d9;
-  }
+html.dark .markdown-body pre {
+  background-color: #161b22;
+  color: #c9d1d9;
+}
 
-  .markdown-body a {
-    color: #58a6ff;
-  }
+html.dark .markdown-body a {
+  color: #58a6ff;
+}
 
-  .markdown-body table thead {
-    background-color: #161b22;
-  }
+html.dark .markdown-body table thead {
+  background-color: #161b22;
+}
 
-  .markdown-body table th, .markdown-body table td {
-    border-color: #30363d;
-  }
+html.dark .markdown-body table th, html.dark .markdown-body table td {
+  border-color: #30363d;
+}
 
-  .markdown-body blockquote {
-    border-left-color: #3b434b;
-    color: #8b949e;
-  }
+html.dark .markdown-body blockquote {
+  border-left-color: #3b434b;
+  color: #8b949e;
+}
 
-  .markdown-body hr {
-    background-color: #21262d;
-  }
+html.dark .markdown-body hr {
+  background-color: #21262d;
 }
 `;
 
-export const getMarkdownFiles = (content: string) => {
+export const getMarkdownFiles = (content: string, _isDarkMode?: boolean) => {
   return {
     'content.md': content || '# No content provided',
     'App.tsx': wrapMarkdownRenderer(content),

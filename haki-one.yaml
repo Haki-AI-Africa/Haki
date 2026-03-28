@@ -83,7 +83,7 @@ interface:
   endpointsMenu: true
   modelSelect: true
   parameters: true
-  sidePanel: true
+  sidePanel: false
   presets: true
   prompts:
     use: false
@@ -101,7 +101,8 @@ interface:
     roles: false
   marketplace:
     use: false
-  fileCitations: false
+  fileCitations: true
+  runCode: false
   mcpServers:
     # MCP Servers configuration
     # Controls user permissions for MCP (Model Context Protocol) server management
@@ -109,7 +110,7 @@ interface:
     # - create: Allow users to create and manage new MCP servers
     # - share: Allow users to share MCP servers with other users
     # - public: Allow users to share MCP servers publicly (with everyone)
-    use: true
+    use: false
     share: false
     create: false
     public: false
