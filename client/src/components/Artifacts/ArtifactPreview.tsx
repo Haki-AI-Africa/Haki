@@ -1,5 +1,5 @@
 import React, { memo, useMemo, type MutableRefObject } from 'react';
-import { SandpackPreview, SandpackProvider } from '@codesandbox/sandpack-react/unstyled';
+import { SandpackPreview, SandpackProvider, useSandpack } from '@codesandbox/sandpack-react/unstyled';
 import type {
   SandpackProviderProps,
   SandpackPreviewRef,
@@ -7,6 +7,26 @@ import type {
 import type { TStartupConfig } from 'librechat-data-provider';
 import type { ArtifactFiles } from '~/common';
 import { sharedFiles, sharedOptions, getIndexHtml } from '~/utils/artifacts';
+
+function TimeoutOverlay() {
+  const { sandpack } = useSandpack();
+  if (sandpack.status !== 'timeout') {
+    return null;
+  }
+  return (
+    <div className="sp-preview-timeout-overlay">
+      <div className="sp-preview-timeout-card">
+        <p className="sp-preview-timeout-title">Preview unavailable</p>
+        <p className="sp-preview-timeout-body">
+          The preview could not load. Please check your internet connection and try again. If the
+          issue persists, contact{' '}
+          <a href="mailto:support@haki.africa">support@haki.africa</a>.
+        </p>
+        <button onClick={() => sandpack.runSandpack()}>Try again</button>
+      </div>
+    </div>
+  );
+}
 
 export const ArtifactPreview = memo(function ({
   files,
@@ -68,6 +88,7 @@ export const ArtifactPreview = memo(function ({
         tabIndex={0}
         ref={previewRef}
       />
+      <TimeoutOverlay />
     </SandpackProvider>
   );
 });
